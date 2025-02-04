@@ -24,15 +24,21 @@ A robust and scalable NestJS boilerplate project with **Swagger API documentatio
 
 2. Install dependencies:
 
+```bash
 npm install
-Set up environment variables:
+```
+
+3. Set up environment variables:
 
 Copy .env.example to .env:
 
+```bash
 cp .env.example .env
+```
+
 Update .env with your database credentials and other configurations.
 
-3. Running the Project
+4. Running the Project
    Start the development server:
 
 npm run start:dev

@@ -41,8 +41,13 @@ Update .env with your database credentials and other configurations.
 4. Running the Project
    Start the development server:
 
+```bash
 npm run start:dev
+```
+
 Build and run the production server:
 
+```bash
 npm run build
 npm run start:prod
+```

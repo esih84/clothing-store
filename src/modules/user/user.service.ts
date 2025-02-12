@@ -10,9 +10,13 @@ export class UserService {
     @InjectRepository(User)
     private userRepository: Repository<User>
   ) {}
+
   async create(createUserDto: CreateUserDto) {
     const { mobile } = createUserDto;
-    const user = this.userRepository.create({ mobile });
+    let user = await this.findOneByMobile(mobile);
+    if (!user) {
+      user = this.userRepository.create({ mobile });
+    }
     await this.userRepository.save(user);
     return user;
   }

@@ -24,10 +24,7 @@ export class AuthService {
   ) {}
   async sendOtp(sendOtpDto: SendOtpDto) {
     const { mobile } = sendOtpDto;
-    let user = await this.userService.findOneByMobile(mobile);
-    if (!user) {
-      user = await this.userService.create({ mobile });
-    }
+    const user = await this.userService.create({ mobile });
     await this.generateOtp(user);
     return { message: "OTP sent successfully" };
   }

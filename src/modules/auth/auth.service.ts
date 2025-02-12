@@ -1,6 +1,8 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
+  Scope,
   UnauthorizedException,
 } from "@nestjs/common";
 import { VerifyOtpDto } from "./dto/verify-otp.dto";
@@ -13,14 +15,17 @@ import { JwtService } from "@nestjs/jwt";
 import { randomInt } from "crypto";
 import { User } from "../user/entities/user.entity";
 import * as bcrypt from "bcrypt";
+import { Request } from "express";
+import { REQUEST } from "@nestjs/core";
 
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class AuthService {
   constructor(
     @InjectRepository(Otp)
     private otpRepository: Repository<Otp>,
     private jwtService: JwtService,
-    private userService: UserService
+    private userService: UserService,
+    @Inject(REQUEST) private request: Request
   ) {}
   async sendOtp(sendOtpDto: SendOtpDto) {
     const { mobile } = sendOtpDto;
@@ -53,6 +58,7 @@ export class AuthService {
 
   async generateOtp(user: User) {
     const otpCode = randomInt(100000, 999999).toString();
+    console.log(otpCode);
     const expiresAt = new Date(Date.now() + 1000 * 60 * 2);
     let otp = await this.otpRepository.findOneBy({ userId: user.id });
     if (otp) {
@@ -73,16 +79,63 @@ export class AuthService {
   }
   async generateTokens(user: User) {
     const payload = { id: user.id, mobile: user.mobile };
-    const accessToken = this.jwtService.sign(payload, { expiresIn: "15m" });
-    const refreshToken = this.jwtService.sign(payload, { expiresIn: "7d" });
-
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: "15m",
+      secret: process.env.ACCESS_TOKEN_SECRET,
+    });
+    const refreshToken = this.jwtService.sign(payload, {
+      expiresIn: "7d",
+      secret: process.env.REFRESH_TOKEN_SECRET,
+    });
     const hashedToken = await bcrypt.hash(refreshToken, 10);
     await this.userService.addRefreshToken(user.id, hashedToken);
 
     return { accessToken, refreshToken };
   }
+  async validateAccessToken(token: string) {
+    try {
+      const payload = this.jwtService.verify(token, {
+        secret: process.env.ACCESS_TOKEN_SECRET,
+      });
+      if (typeof payload === "object" && payload?.id) {
+        const user = await this.userService.customSearch({ id: payload.id });
+        if (!user) {
+          throw new UnauthorizedException("login on your account");
+        }
+        return payload;
+      }
+      throw new UnauthorizedException("login on your account");
+    } catch (error) {
+      throw new UnauthorizedException("login on your account");
+    }
+  }
 
-  logout() {
-    return `This action logout user`;
+  async refreshTokens(refreshToken: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: process.env.REFRESH_TOKEN_SECRET,
+      });
+
+      if (typeof payload === "object" && payload?.id) {
+        const user = await this.userService.customSearch({ id: payload.id });
+        if (!user) {
+          throw new UnauthorizedException("User not found");
+        }
+        const isMatch = await bcrypt.compare(refreshToken, user.refreshToken);
+        if (!isMatch) {
+          throw new UnauthorizedException("Invalid refresh token");
+        }
+
+        return this.generateTokens(user);
+      }
+    } catch (error) {
+      throw new UnauthorizedException("Invalid refresh token");
+    }
+  }
+
+  async logout() {
+    const user = await this.request["user"];
+    await this.userService.updateUser(user.id, { refreshToken: null });
+    return { message: "Logged out successfully" };
   }
 }

@@ -1,8 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "./entities/user.entity";
 import { FindOptionsRelations, FindOptionsWhere, Repository } from "typeorm";
+import { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity";
 
 @Injectable()
 export class UserService {
@@ -39,5 +40,15 @@ export class UserService {
   }
   async addRefreshToken(userId: number, refreshToken) {
     await this.userRepository.update({ id: userId }, { refreshToken });
+  }
+  async updateUser(
+    criteria: FindOptionsWhere<User>,
+    data: QueryDeepPartialEntity<User>
+  ) {
+    const user = await this.customSearch(criteria);
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+    await this.userRepository.update(criteria, data);
   }
 }

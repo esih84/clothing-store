@@ -6,9 +6,8 @@ import { User } from "src/modules/user/entities/user.entity";
 
 @Entity("shop_user-roles")
 export class ShopUserRole extends BaseEntity {
-  @ManyToMany(() => Role, (role) => role.users)
-  @JoinTable()
-  roles: Role[];
+  @ManyToOne(() => Role, (role) => role.users)
+  roles: Role;
   @ManyToOne(() => Shop, (shop) => shop.userRoles)
   shop: Shop;
   @ManyToOne(() => User, (user) => user.shopRoles)

@@ -9,6 +9,6 @@ export class Role extends BaseEntity {
   name: RoleNames;
   @Column({ default: true })
   isActive: boolean;
-  @OneToMany(() => ShopUserRole, (shopUser) => shopUser.roles)
+  @OneToMany(() => ShopUserRole, (shopUser) => shopUser.role)
   users: ShopUserRole[];
 }

@@ -1,14 +1,17 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Role } from "./entities/role.entity";
 import { In, Repository } from "typeorm";
 import { RoleNames } from "./enums/role.enum";
+import { ShopUserRole } from "./entities/shop-user-role.entity";
 
 @Injectable()
 export class RoleService {
   constructor(
     @InjectRepository(Role)
-    private roleRepository: Repository<Role>
+    private roleRepository: Repository<Role>,
+    @InjectRepository(ShopUserRole)
+    private shopUserRoleRepository: Repository<ShopUserRole>
   ) {}
   async seedRoles() {
     try {
@@ -28,5 +31,23 @@ export class RoleService {
     } catch (error) {
       throw new Error("Error seeding roles: " + error.message);
     }
+  }
+  async assignRoleToUser(shopId: number, userId: number, roleName: RoleNames) {
+    const role = await this.findOneByName(roleName);
+    const shopUserRole = this.shopUserRoleRepository.create({
+      shopId,
+      userId,
+      roleId: role.id,
+    });
+    await this.shopUserRoleRepository.save(shopUserRole);
+  }
+  async findOneByName(name: RoleNames) {
+    const adminShopRole = await this.roleRepository.findOneBy({
+      name: name,
+    });
+    if (!adminShopRole) {
+      throw new InternalServerErrorException("Role adminShop not found");
+    }
+    return adminShopRole;
   }
 }

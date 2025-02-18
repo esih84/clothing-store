@@ -31,11 +31,9 @@ export class ShopService {
     await this.shopRepository.save(newShop);
 
     //? Assign the adminShop role to the user
-    await this.roleService.assignRoleToUser(
-      newShop.id,
-      user.id,
-      RoleNames.ADMIN_SHOP
-    );
+    await this.roleService.assignRolesToUser(newShop.id, user.id, [
+      RoleNames.ADMIN_SHOP,
+    ]);
     return {
       message: "Shop created successfully",
       shop: newShop,

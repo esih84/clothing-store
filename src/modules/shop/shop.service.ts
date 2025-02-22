@@ -1,4 +1,11 @@
-import { ConflictException, Inject, Injectable, Scope } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  Scope,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Shop } from "./entities/shop.entity";
 import { Repository } from "typeorm";
@@ -31,9 +38,11 @@ export class ShopService {
     await this.shopRepository.save(newShop);
 
     //? Assign the adminShop role to the user
-    await this.roleService.assignRolesToUser(newShop.id, user.id, [
-      RoleNames.ADMIN_SHOP,
-    ]);
+    await this.roleService.assignRolesToUser(
+      user.id,
+      [RoleNames.ADMIN_SHOP],
+      newShop.id
+    );
     return {
       message: "Shop created successfully",
       shop: newShop,
@@ -41,6 +50,13 @@ export class ShopService {
   }
   async findOneByName(name: string) {
     const shop = await this.shopRepository.findOneBy({ name });
+    return shop;
+  }
+  async findOneById(shopId: number) {
+    const shop = await this.shopRepository.findOneBy({ id: shopId });
+    if (!shop) {
+      throw new ConflictException("Shop not found");
+    }
     return shop;
   }
 }

@@ -10,7 +10,7 @@ export class ShopUserRole extends BaseEntity {
   roleId: number;
   @ManyToOne(() => Role, (role) => role.users)
   role: Role;
-  @Column()
+  @Column({ nullable: true })
   shopId: number;
   @ManyToOne(() => Shop, (shop) => shop.userRoles)
   shop: Shop;

@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Role } from "./entities/role.entity";
 import { In, Repository } from "typeorm";
@@ -32,22 +32,39 @@ export class RoleService {
       throw new Error("Error seeding roles: " + error.message);
     }
   }
-  async assignRoleToUser(shopId: number, userId: number, roleName: RoleNames) {
-    const role = await this.findOneByName(roleName);
-    const shopUserRole = this.shopUserRoleRepository.create({
-      shopId,
+  async assignRolesToUser(
+    userId: number,
+    roleNames: RoleNames[],
+    shopId?: number
+  ) {
+    const roles = await this.findRolesByName(roleNames);
+    const shopUserRole = roles.map((role) => ({
+      shopId: shopId ?? null,
       userId,
       roleId: role.id,
-    });
+    }));
     await this.shopUserRoleRepository.save(shopUserRole);
   }
-  async findOneByName(name: RoleNames) {
-    const adminShopRole = await this.roleRepository.findOneBy({
-      name: name,
+
+  async findRolesByName(names: RoleNames[]) {
+    const roles = await this.roleRepository.find({
+      where: { name: In(names) },
     });
-    if (!adminShopRole) {
-      throw new InternalServerErrorException("Role adminShop not found");
+    if (!roles || roles.length === 0) {
+      throw new NotFoundException("Roles not found");
     }
-    return adminShopRole;
+    return roles;
+  }
+  async CheckUserRole(userId: number, roleName: RoleNames, shopId?: number) {
+    const role = await this.findRolesByName([roleName]);
+    const shopUserRole = await this.shopUserRoleRepository.findOne({
+      where: {
+        userId,
+        shopId: shopId ?? null,
+        roleId: role[0].id,
+      },
+    });
+
+    return !!shopUserRole;
   }
 }

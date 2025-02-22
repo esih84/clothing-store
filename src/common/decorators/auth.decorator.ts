@@ -1,7 +1,14 @@
 import { applyDecorators, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth } from "@nestjs/swagger";
 import { AuthGuard } from "src/modules/auth/guards/auth.guard";
+import { RoleNames } from "src/modules/role/enums/role.enum";
+import { Roles } from "src/modules/shop/decorators/role-in-shop.decorator";
+import { RolesGuard } from "src/modules/shop/guards/role.guard";
 
-export function Auth() {
-  return applyDecorators(UseGuards(AuthGuard), ApiBearerAuth("Authorization"));
+export function Auth(...roles: RoleNames[]) {
+  return applyDecorators(
+    Roles(roles),
+    UseGuards(AuthGuard, RolesGuard),
+    ApiBearerAuth("Authorization")
+  );
 }

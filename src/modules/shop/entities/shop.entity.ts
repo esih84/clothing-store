@@ -4,6 +4,8 @@ import { Column, Entity, JoinColumn, OneToMany, OneToOne } from "typeorm";
 import { ShopStatus, VerificationStatus } from "../enums/shop.enum";
 import { Location } from "./location.entity";
 import { ShopOtp } from "./ShopOtp.entity";
+import { ShopFile } from "./shop-file.entity";
+
 @Entity("shops")
 export class Shop extends BaseEntity {
   @Column()
@@ -28,12 +30,6 @@ export class Shop extends BaseEntity {
   email: string;
   @Column({ nullable: true })
   password: string;
-  @Column({ nullable: true })
-  logoUrl: string;
-  @Column({ nullable: true })
-  bannerUrl: string;
-  @Column({ nullable: true })
-  videoUrl: string;
   @OneToOne(() => Location, (location) => location.shop)
   @JoinColumn()
   location: Location;
@@ -41,6 +37,8 @@ export class Shop extends BaseEntity {
   otp: ShopOtp;
   @OneToMany(() => ShopUserRole, (shopUserRole) => shopUserRole.shop)
   userRoles: ShopUserRole[];
+  @OneToMany(() => ShopFile, (shopFile) => shopFile.shop)
+  files: ShopFile[];
   @Column({ default: false })
   isPhoneVerified: boolean;
 }

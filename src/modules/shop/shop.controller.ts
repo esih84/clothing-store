@@ -1,4 +1,12 @@
-import { Controller, Body, Post, Param, ParseIntPipe } from "@nestjs/common";
+import {
+  Controller,
+  Body,
+  Post,
+  Param,
+  ParseIntPipe,
+  UseInterceptors,
+  UploadedFiles,
+} from "@nestjs/common";
 import { ShopService } from "./shop.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { ApiConsumes, ApiOperation, ApiResponse } from "@nestjs/swagger";
@@ -7,6 +15,8 @@ import { Auth } from "src/common/decorators/auth.decorator";
 import { RoleNames } from "../role/enums/role.enum";
 import { SendOtpDto } from "../auth/dto/send-otp.dto";
 import { VerifyOtpDto } from "../auth/dto/verify-otp.dto";
+import { UploadFilesInterceptor } from "src/common/interceptors/uploadFiles.interceptor";
+import { FileUploadDto } from "./dto/file-upload.dto";
 
 @Controller("shop")
 export class ShopController {
@@ -41,5 +51,17 @@ export class ShopController {
     @Body() verifyOtpDto: VerifyOtpDto
   ) {
     return this.shopService.verifyShopOtp(shopId, verifyOtpDto);
+  }
+  @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
+  @Post("/:shopId/upload-file")
+  @ApiConsumes(SwaggerConsumes.MultipartData)
+  @UseInterceptors(UploadFilesInterceptor([{ name: "files", maxCount: 10 }]))
+  uploadFiles(
+    @Body() fileUploadDto: FileUploadDto,
+    @UploadedFiles()
+    files: { files: Express.Multer.File[] },
+    @Param("shopId", ParseIntPipe) shopId: number
+  ) {
+    return this.shopService.UploadFile(shopId, fileUploadDto, files.files);
   }
 }

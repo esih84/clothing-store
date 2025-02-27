@@ -8,7 +8,7 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Shop } from "./entities/shop.entity";
-import { Repository } from "typeorm";
+import { DeepPartial, Repository } from "typeorm";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { REQUEST } from "@nestjs/core";
 import { Request } from "express";
@@ -18,6 +18,10 @@ import { ShopOtp } from "./entities/ShopOtp.entity";
 import { randomInt } from "crypto";
 import { SendOtpDto } from "../auth/dto/send-otp.dto";
 import { VerifyOtpDto } from "../auth/dto/verify-otp.dto";
+import { ShopFile } from "./entities/shop-file.entity";
+import { FileUploadDto } from "./dto/file-upload.dto";
+import { FileType } from "./enums/shop-file-type.enum";
+import { S3Service } from "../s3/s3.service";
 
 @Injectable({ scope: Scope.REQUEST })
 export class ShopService {
@@ -26,7 +30,9 @@ export class ShopService {
     private shopRepository: Repository<Shop>,
     @InjectRepository(ShopOtp)
     private shopOtpRepository: Repository<ShopOtp>,
-
+    @InjectRepository(ShopFile)
+    private shopFileRepository: Repository<ShopFile>,
+    private s3Service: S3Service,
     private roleService: RoleService,
     @Inject(REQUEST) private request: Request
   ) {}
@@ -166,5 +172,101 @@ export class ShopService {
     return {
       message: "Phone number verified successfully",
     };
+  }
+  /**
+   * Uploads files to the specified shop.
+   *
+   * @param shopId - The ID of the shop to which the files are to be uploaded.
+   * @param fileUploadDto - Data transfer object containing the file type.
+   * @param files - Array of files to be uploaded.
+   *
+   * @throws {BadRequestException} If the number of files exceeds the allowed limit for the specified file type.
+   * @throws {BadRequestException} If any of the files have an invalid type or exceed the maximum allowed size.
+   *
+   * @returns An object containing a success message indicating that the files were uploaded successfully.
+   */
+  async UploadFile(
+    shopId: number,
+    fileUploadDto: FileUploadDto,
+    files: Express.Multer.File[]
+  ) {
+    const { fileType } = fileUploadDto;
+    const shop = await this.findOneById(shopId);
+    // Check the number of existing files of the same type
+    const existingFilesCount = await this.shopFileRepository.count({
+      where: { shopId: shop.id, fileType },
+    });
+    const maxFilesAllowed = this.getMaxFilesAllowed(fileType);
+
+    if (existingFilesCount + files.length > maxFilesAllowed) {
+      throw new BadRequestException(
+        `Cannot upload more than ${maxFilesAllowed} ${fileType.toLowerCase()} files`
+      );
+    }
+    this.validateFiles(fileType, files);
+
+    const foldername = fileType === FileType.DOC ? "shop_docs" : "shop_files";
+
+    const fileResultLocations = await Promise.all(
+      files.map(async (file): Promise<DeepPartial<ShopFile>> => {
+        const data = await this.s3Service.uploadFile(file, foldername);
+
+        return {
+          shopId,
+          fileType,
+          fileUrl: data.Location,
+        };
+      })
+    );
+    await this.shopFileRepository.insert(fileResultLocations);
+    return {
+      message: "Files uploaded successfully",
+    };
+  }
+  private getMaxFilesAllowed(fileType: FileType): number {
+    switch (fileType) {
+      case FileType.BANNER:
+        return 6;
+      case FileType.DOC:
+      case FileType.LOGO:
+        return 3;
+      case FileType.VIDEO:
+        return 2;
+      default:
+        throw new BadRequestException("Invalid file type");
+    }
+  }
+  private validateFiles(fileType: FileType, files: Express.Multer.File[]) {
+    const { validMimeTypes, maxSize } = this.getValidMimeTypes(fileType);
+
+    for (const file of files) {
+      if (!validMimeTypes.includes(file.mimetype)) {
+        throw new BadRequestException(`Invalid file type: ${file.mimetype}`);
+      }
+      if (file.size > maxSize) {
+        throw new BadRequestException(
+          `File size exceeds the limit of ${maxSize / (1000 * 1000)} MB`
+        );
+      }
+    }
+  }
+
+  private getValidMimeTypes(fileType: FileType) {
+    switch (fileType) {
+      case FileType.BANNER:
+      case FileType.DOC:
+      case FileType.LOGO:
+        return {
+          validMimeTypes: ["image/jpeg", "image/png", "image/jpg"],
+          maxSize: 24 * 1000 * 1000,
+        };
+      case FileType.VIDEO:
+        return {
+          validMimeTypes: ["video/mp4"],
+          maxSize: 300 * 1000 * 1000,
+        };
+      default:
+        throw new BadRequestException("Invalid file type");
+    }
   }
 }

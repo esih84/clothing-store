@@ -38,9 +38,18 @@ export class RoleService {
     shopId?: number
   ) {
     const roles = await this.findRolesByName(roleNames);
+    if (shopId) {
+      const existingRoles = await this.shopUserRoleRepository.find({
+        where: { userId, shopId },
+      });
+      if (existingRoles.length > 0) {
+        await this.shopUserRoleRepository.remove(existingRoles);
+      }
+    }
     const shopUserRole = roles.map((role) => ({
       shopId: shopId ?? null,
       userId,
+
       roleId: role.id,
     }));
     await this.shopUserRoleRepository.save(shopUserRole);

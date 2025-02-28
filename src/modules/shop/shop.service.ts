@@ -8,7 +8,7 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Shop } from "./entities/shop.entity";
-import { DeepPartial, Repository } from "typeorm";
+import { DataSource, DeepPartial, Repository } from "typeorm";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { REQUEST } from "@nestjs/core";
 import { Request } from "express";
@@ -22,6 +22,7 @@ import { ShopFile } from "./entities/shop-file.entity";
 import { FileUploadDto } from "./dto/file-upload.dto";
 import { FileType } from "./enums/shop-file-type.enum";
 import { S3Service } from "../s3/s3.service";
+import { ShopUserRole } from "../role/entities/shop-user-role.entity";
 
 @Injectable({ scope: Scope.REQUEST })
 export class ShopService {
@@ -32,9 +33,12 @@ export class ShopService {
     private shopOtpRepository: Repository<ShopOtp>,
     @InjectRepository(ShopFile)
     private shopFileRepository: Repository<ShopFile>,
+    @InjectRepository(ShopUserRole)
+    private shopUserRoleRepository: Repository<ShopUserRole>,
     private s3Service: S3Service,
     private roleService: RoleService,
-    @Inject(REQUEST) private request: Request
+    @Inject(REQUEST) private request: Request,
+    private dataSource: DataSource
   ) {}
 
   async create(createShopDto: CreateShopDto) {
@@ -268,5 +272,36 @@ export class ShopService {
       default:
         throw new BadRequestException("Invalid file type");
     }
+  }
+
+  async findAllUserShops() {
+    const { id: userId } = this.request["user"];
+    const [userShops, count] = await this.dataSource
+      .getRepository(ShopUserRole)
+      .createQueryBuilder("shopUserRole")
+      .leftJoinAndSelect("shopUserRole.shop", "shop")
+      .leftJoinAndSelect(
+        "shop.files",
+        "files",
+        "files.fileType =:fileType AND files.isActive = :isActive",
+        {
+          fileType: FileType.LOGO,
+          isActive: true,
+        }
+      )
+      .select([
+        "shopUserRole",
+        "shop.id",
+        "shop.name",
+        "files.fileUrl",
+        "files.fileType",
+      ])
+      .where("shopUserRole.userId = :userId", { userId })
+      .getManyAndCount();
+    return {
+      message: "User stores were successfully found",
+      count,
+      shops: userShops.map((userShop) => userShop.shop),
+    };
   }
 }

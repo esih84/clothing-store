@@ -6,6 +6,7 @@ import {
   ParseIntPipe,
   UseInterceptors,
   UploadedFiles,
+  Get,
 } from "@nestjs/common";
 import { ShopService } from "./shop.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
@@ -63,5 +64,15 @@ export class ShopController {
     @Param("shopId", ParseIntPipe) shopId: number
   ) {
     return this.shopService.UploadFile(shopId, fileUploadDto, files.files);
+  }
+  @Auth()
+  @ApiOperation({ summary: "show all user stores" })
+  @ApiResponse({
+    status: 200,
+    description: "User stores were successfully found.",
+  })
+  @Get("/find-all-user-shops")
+  findAllUserShops() {
+    return this.shopService.findAllUserShops();
   }
 }

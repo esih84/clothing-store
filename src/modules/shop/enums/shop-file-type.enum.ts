@@ -3,4 +3,5 @@ export enum FileType {
   LOGO = "logo",
   VIDEO = "video",
   DOC = "doc",
+  CONTRACT = "contract",
 }

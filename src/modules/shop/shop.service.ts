@@ -19,6 +19,7 @@ import { FileUploadDto } from "./dto/file-upload.dto";
 import { FileType } from "./enums/shop-file-type.enum";
 import { S3Service } from "../s3/s3.service";
 import { ShopUserRole } from "../role/entities/shop-user-role.entity";
+import { VerificationStatus } from "./enums/shop.enum";
 
 @Injectable({ scope: Scope.REQUEST })
 export class ShopService {
@@ -72,10 +73,9 @@ export class ShopService {
 
   async UploadFile(
     shopId: number,
-    fileUploadDto: FileUploadDto,
+    fileType: FileType,
     files: Express.Multer.File[]
   ) {
-    const { fileType } = fileUploadDto;
     const shop = await this.findOneById(shopId);
     // Check the number of existing files of the same type
     const existingFilesCount = await this.shopFileRepository.count({
@@ -90,7 +90,10 @@ export class ShopService {
     }
     this.validateFiles(fileType, files);
 
-    const foldername = fileType === FileType.DOC ? "shop_docs" : "shop_files";
+    const foldername =
+      fileType === (FileType.DOC || FileType.CONTRACT)
+        ? "shop_docs"
+        : "shop_files";
 
     const fileResultLocations = await Promise.all(
       files.map(async (file): Promise<DeepPartial<ShopFile>> => {
@@ -104,6 +107,13 @@ export class ShopService {
       })
     );
     await this.shopFileRepository.insert(fileResultLocations);
+    if (fileType === FileType.DOC) {
+      shop.verificationStatus = VerificationStatus.SHOP_DOCUMENT_UPLOADED;
+      await this.shopRepository.save(shop);
+    } else if (fileType === FileType.CONTRACT) {
+      shop.verificationStatus = VerificationStatus.CONTRACT;
+      await this.shopRepository.save(shop);
+    }
     return {
       message: "Files uploaded successfully",
     };
@@ -113,6 +123,8 @@ export class ShopService {
       case FileType.BANNER:
         return 6;
       case FileType.DOC:
+      case FileType.CONTRACT:
+        return 1;
       case FileType.LOGO:
         return 3;
       case FileType.VIDEO:
@@ -138,8 +150,18 @@ export class ShopService {
 
   private getValidMimeTypes(fileType: FileType) {
     switch (fileType) {
-      case FileType.BANNER:
       case FileType.DOC:
+      case FileType.CONTRACT:
+        return {
+          validMimeTypes: [
+            "image/jpeg",
+            "image/png",
+            "image/jpg",
+            "application/pdf",
+          ],
+          maxSize: 10 * 1000 * 1000,
+        };
+      case FileType.BANNER:
       case FileType.LOGO:
         return {
           validMimeTypes: ["image/jpeg", "image/png", "image/jpg"],

@@ -9,7 +9,7 @@ export class FileUploadDto {
     maxItems: 3,
   })
   files: Express.Multer.File[];
-  @ApiProperty({ enum: FileType })
+  @ApiProperty({ enum: [FileType.BANNER, FileType.LOGO, FileType.VIDEO] })
   @IsEnum(FileType)
-  fileType: FileType;
+  fileType: FileType.BANNER | FileType.LOGO | FileType.VIDEO;
 }

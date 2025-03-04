@@ -16,6 +16,11 @@ import { Auth } from "src/common/decorators/auth.decorator";
 import { RoleNames } from "../role/enums/role.enum";
 import { UploadFilesInterceptor } from "src/common/interceptors/uploadFiles.interceptor";
 import { FileUploadDto } from "./dto/file-upload.dto";
+import { FileType } from "./enums/shop-file-type.enum";
+import {
+  UploadShopContractDto,
+  UploadShopDocumentDto,
+} from "./dto/doc-upload.dto";
 
 @Controller("shop")
 export class ShopController {
@@ -29,6 +34,7 @@ export class ShopController {
   create(@Body() createShopDto: CreateShopDto) {
     return this.shopService.create(createShopDto);
   }
+
   @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
   @Post("/:shopId/upload-file")
   @ApiConsumes(SwaggerConsumes.MultipartData)
@@ -39,8 +45,42 @@ export class ShopController {
     files: { files: Express.Multer.File[] },
     @Param("shopId", ParseIntPipe) shopId: number
   ) {
-    return this.shopService.UploadFile(shopId, fileUploadDto, files.files);
+    return this.shopService.UploadFile(
+      shopId,
+      fileUploadDto.fileType,
+      files.files
+    );
   }
+  @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
+  @Post("/:shopId/upload-document")
+  @ApiConsumes(SwaggerConsumes.MultipartData)
+  @UseInterceptors(UploadFilesInterceptor([{ name: "doc", maxCount: 1 }]))
+  uploadShopDocument(
+    @Body() shopDocumentDto: UploadShopDocumentDto,
+    @UploadedFiles()
+    files: { doc: Express.Multer.File[] },
+    @Param("shopId", ParseIntPipe) shopId: number
+  ) {
+    return this.shopService.UploadFile(shopId, FileType.DOC, files.doc);
+  }
+
+  @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
+  @Post("/:shopId/upload-contract")
+  @ApiConsumes(SwaggerConsumes.MultipartData)
+  @UseInterceptors(UploadFilesInterceptor([{ name: "contract", maxCount: 1 }]))
+  registerContract(
+    @Body() ShopContractDto: UploadShopContractDto,
+    @UploadedFiles()
+    files: { contract: Express.Multer.File[] },
+    @Param("shopId", ParseIntPipe) shopId: number
+  ) {
+    return this.shopService.UploadFile(
+      shopId,
+      FileType.CONTRACT,
+      files.contract
+    );
+  }
+
   @Auth()
   @ApiOperation({ summary: "show all user stores" })
   @ApiResponse({

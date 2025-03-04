@@ -14,10 +14,6 @@ import { REQUEST } from "@nestjs/core";
 import { Request } from "express";
 import { RoleService } from "../role/role.service";
 import { RoleNames } from "../role/enums/role.enum";
-import { ShopOtp } from "./entities/ShopOtp.entity";
-import { randomInt } from "crypto";
-import { SendOtpDto } from "../auth/dto/send-otp.dto";
-import { VerifyOtpDto } from "../auth/dto/verify-otp.dto";
 import { ShopFile } from "./entities/shop-file.entity";
 import { FileUploadDto } from "./dto/file-upload.dto";
 import { FileType } from "./enums/shop-file-type.enum";
@@ -29,8 +25,6 @@ export class ShopService {
   constructor(
     @InjectRepository(Shop)
     private shopRepository: Repository<Shop>,
-    @InjectRepository(ShopOtp)
-    private shopOtpRepository: Repository<ShopOtp>,
     @InjectRepository(ShopFile)
     private shopFileRepository: Repository<ShopFile>,
     @InjectRepository(ShopUserRole)
@@ -75,120 +69,7 @@ export class ShopService {
     }
     return shop;
   }
-  async findOneByMobile(phoneNumber: string) {
-    return await this.shopRepository.findOneBy({ phoneNumber });
-  }
-  /**
-   * Sends an OTP (One-Time Password) to the specified shop's mobile number.
-   *
-   * @param shopId - The ID of the shop to which the OTP is to be sent.
-   * @param sendOtpDto - Data transfer object containing the mobile number to which the OTP is to be sent.
-   *
-   * @throws {ConflictException} If the mobile number is already associated with another shop.
-   * @throws {ConflictException} If the mobile number is the same as the user's phone number.
-   *
-   * @returns An object containing a success message indicating that the OTP was sent successfully.
-   */
-  async sendShopOtp(shopId: number, sendOtpDto: SendOtpDto) {
-    const { mobile } = sendOtpDto;
-    const user = this.request["user"];
-    const existingShopWithMobile = await this.findOneByMobile(mobile);
 
-    if (!!existingShopWithMobile && existingShopWithMobile.id !== shopId) {
-      throw new ConflictException(
-        "Phone number already associated with another shop"
-      );
-    }
-    if (mobile === user.phone) {
-      throw new ConflictException(
-        "Phone number is the same as the user's phone number"
-      );
-    }
-    const shop =
-      existingShopWithMobile?.id === shopId
-        ? existingShopWithMobile
-        : await this.findOneById(shopId);
-    shop.phoneNumber = mobile;
-    await this.shopRepository.save(shop);
-    //*Checking whether the user has access to this store is checked in guard
-    await this.generateOtpCode(shop);
-
-    return {
-      message: "OTP sent successfully",
-    };
-  }
-  async generateOtpCode(shop: Shop) {
-    const otpCode = randomInt(100000, 999999).toString();
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 2);
-    let otp = await this.shopOtpRepository.findOneBy({ shopId: shop.id });
-    if (otp) {
-      if (otp.expiresAt > new Date()) {
-        throw new BadRequestException("The otp code has not expired");
-      }
-      otp.code = otpCode;
-      otp.expiresAt = expiresAt;
-    } else {
-      otp = this.shopOtpRepository.create({
-        code: otpCode,
-        expiresAt,
-        shopId: shop.id,
-      });
-    }
-    console.log(otpCode);
-    await this.shopOtpRepository.save(otp);
-  }
-
-  /**
-   * Verifies the OTP (One-Time Password) sent to the shop's mobile number.
-   *
-   * @param shopId - The ID of the shop to which the OTP was sent.
-   * @param verifyOtpDto - Data transfer object containing the mobile number and OTP code to be verified.
-   *
-   * @throws {BadRequestException} If the shop is not found.
-   * @throws {ConflictException} If the OTP is invalid or expired.
-   *
-   * @returns An object containing a success message indicating that the phone number was verified successfully.
-   */
-  async verifyShopOtp(shopId: number, verifyOtpDto: VerifyOtpDto) {
-    const { mobile, code } = verifyOtpDto;
-    const shop = await this.shopRepository.findOneBy({
-      phoneNumber: mobile,
-      id: shopId,
-    });
-    if (!shop) {
-      throw new BadRequestException("shop not found");
-    }
-    const shopOtp = await this.shopOtpRepository.findOne({
-      where: { shop: { id: shop.id, phoneNumber: shop.phoneNumber } },
-    });
-    if (!shopOtp || shopOtp.code !== code || shopOtp.expiresAt < new Date()) {
-      throw new ConflictException("Invalid or expired OTP");
-    }
-
-    if (!shop.isPhoneVerified) {
-      await this.shopRepository.update(
-        { id: shop.id },
-        { isPhoneVerified: true }
-      );
-    }
-    await this.shopOtpRepository.delete({ id: shopOtp.id });
-
-    return {
-      message: "Phone number verified successfully",
-    };
-  }
-  /**
-   * Uploads files to the specified shop.
-   *
-   * @param shopId - The ID of the shop to which the files are to be uploaded.
-   * @param fileUploadDto - Data transfer object containing the file type.
-   * @param files - Array of files to be uploaded.
-   *
-   * @throws {BadRequestException} If the number of files exceeds the allowed limit for the specified file type.
-   * @throws {BadRequestException} If any of the files have an invalid type or exceed the maximum allowed size.
-   *
-   * @returns An object containing a success message indicating that the files were uploaded successfully.
-   */
   async UploadFile(
     shopId: number,
     fileUploadDto: FileUploadDto,

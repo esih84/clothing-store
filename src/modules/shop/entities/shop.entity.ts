@@ -3,7 +3,6 @@ import { ShopUserRole } from "src/modules/role/entities/shop-user-role.entity";
 import { Column, Entity, JoinColumn, OneToMany, OneToOne } from "typeorm";
 import { ShopStatus, VerificationStatus } from "../enums/shop.enum";
 import { Location } from "./location.entity";
-import { ShopOtp } from "./ShopOtp.entity";
 import { ShopFile } from "./shop-file.entity";
 
 @Entity("shops")
@@ -12,8 +11,6 @@ export class Shop extends BaseEntity {
   name: string;
   @Column({ nullable: true })
   address: string;
-  @Column({ nullable: true })
-  phoneNumber: string;
   @Column({ nullable: true })
   bio: string;
 
@@ -33,12 +30,8 @@ export class Shop extends BaseEntity {
   @OneToOne(() => Location, (location) => location.shop)
   @JoinColumn()
   location: Location;
-  @OneToOne(() => ShopOtp, (shopOtp) => shopOtp.shop)
-  otp: ShopOtp;
   @OneToMany(() => ShopUserRole, (shopUserRole) => shopUserRole.shop)
   userRoles: ShopUserRole[];
   @OneToMany(() => ShopFile, (shopFile) => shopFile.shop)
   files: ShopFile[];
-  @Column({ default: false })
-  isPhoneVerified: boolean;
 }

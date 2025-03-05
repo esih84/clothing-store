@@ -10,7 +10,12 @@ import {
 } from "@nestjs/common";
 import { ShopService } from "./shop.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
-import { ApiConsumes, ApiOperation, ApiResponse } from "@nestjs/swagger";
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiResponse,
+} from "@nestjs/swagger";
 import { SwaggerConsumes } from "src/common/enums/swagger-consumes.enum";
 import { Auth } from "src/common/decorators/auth.decorator";
 import { RoleNames } from "../role/enums/role.enum";
@@ -54,9 +59,9 @@ export class ShopController {
   @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
   @Post("/:shopId/upload-document")
   @ApiConsumes(SwaggerConsumes.MultipartData)
+  @ApiBody({ type: UploadShopDocumentDto })
   @UseInterceptors(UploadFilesInterceptor([{ name: "doc", maxCount: 1 }]))
   uploadShopDocument(
-    @Body() shopDocumentDto: UploadShopDocumentDto,
     @UploadedFiles()
     files: { doc: Express.Multer.File[] },
     @Param("shopId", ParseIntPipe) shopId: number
@@ -67,9 +72,9 @@ export class ShopController {
   @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
   @Post("/:shopId/upload-contract")
   @ApiConsumes(SwaggerConsumes.MultipartData)
+  @ApiBody({ type: UploadShopContractDto })
   @UseInterceptors(UploadFilesInterceptor([{ name: "contract", maxCount: 1 }]))
   registerContract(
-    @Body() ShopContractDto: UploadShopContractDto,
     @UploadedFiles()
     files: { contract: Express.Multer.File[] },
     @Param("shopId", ParseIntPipe) shopId: number

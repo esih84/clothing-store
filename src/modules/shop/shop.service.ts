@@ -108,9 +108,19 @@ export class ShopService {
     );
     await this.shopFileRepository.insert(fileResultLocations);
     if (fileType === FileType.DOC) {
+      if (shop.verificationStatus !== VerificationStatus.UNVERIFIED) {
+        throw new BadRequestException("Unable upload document files now");
+      }
+
       shop.verificationStatus = VerificationStatus.SHOP_DOCUMENT_UPLOADED;
       await this.shopRepository.save(shop);
     } else if (fileType === FileType.CONTRACT) {
+      if (
+        shop.verificationStatus !== VerificationStatus.SHOP_DOCUMENT_UPLOADED
+      ) {
+        throw new BadRequestException("Unable upload contract files now");
+      }
+
       shop.verificationStatus = VerificationStatus.CONTRACT;
       await this.shopRepository.save(shop);
     }

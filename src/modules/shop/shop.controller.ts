@@ -25,9 +25,10 @@ import { UploadFilesInterceptor } from "src/common/interceptors/uploadFiles.inte
 import { FileUploadDto, GetShopFilesDto } from "./dto/file.dto";
 import { FileType } from "./enums/shop-file-type.enum";
 import {
+  GetShopDocsDto,
   UploadShopContractDto,
   UploadShopDocumentDto,
-} from "./dto/doc-upload.dto";
+} from "./dto/document.dto";
 import { UpdateShopLocationDto } from "./dto/update-shop-location.dto";
 import { UpdateShopDto } from "./dto/update-shop.dto";
 
@@ -118,6 +119,20 @@ export class ShopController {
     );
   }
 
+  @Auth(RoleNames.ADMIN)
+  @Get("/:shopId/docs")
+  @ApiOperation({ summary: "get shop docs based on file type" })
+  @ApiResponse({
+    status: 200,
+    description: "shop document list received successfully",
+  })
+  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
+  findShopDocsByType(
+    @Param("shopId", ParseIntPipe) shopId: number,
+    @Query() getShopDocsDto: GetShopDocsDto
+  ) {
+    return this.shopService.findShopDocsByType(shopId, getShopDocsDto);
+  }
   @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
   @Post("/:shopId/update-location")
   @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)

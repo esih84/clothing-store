@@ -24,6 +24,7 @@ import { ShopLocation } from "./entities/Shop-location.entity";
 import { UpdateShopLocationDto } from "./dto/update-shop-location.dto";
 import { UpdateShopDto } from "./dto/update-shop.dto";
 import { GetShopFilesDto } from "./dto/file.dto";
+import { GetShopDocsDto } from "./dto/document.dto";
 
 @Injectable({ scope: Scope.REQUEST })
 export class ShopService {
@@ -171,6 +172,23 @@ export class ShopService {
       files,
     };
   }
+
+  async findShopDocsByType(shopId: number, getShopDocsDto: GetShopDocsDto) {
+    const { fileType } = getShopDocsDto;
+
+    const shop = await this.findOneById(shopId);
+
+    const documents = await this.shopFileRepository.find({
+      where: { shopId: shop.id, fileType },
+      select: ["id", "fileType", "fileUrl", "isActive", "createdAt"],
+    });
+
+    return {
+      message: "shop document list received successfully",
+      documents,
+    };
+  }
+
   private getMaxFilesAllowed(fileType: FileType): number {
     switch (fileType) {
       case FileType.BANNER:

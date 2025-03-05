@@ -13,3 +13,9 @@ export class FileUploadDto {
   @IsEnum(FileType)
   fileType: FileType.BANNER | FileType.LOGO | FileType.VIDEO;
 }
+
+export class GetShopFilesDto {
+  @ApiProperty({ enum: [FileType.BANNER, FileType.LOGO, FileType.VIDEO] })
+  @IsEnum(FileType)
+  fileType: FileType.BANNER | FileType.LOGO | FileType.VIDEO;
+}

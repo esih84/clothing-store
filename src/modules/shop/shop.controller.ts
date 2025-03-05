@@ -8,6 +8,7 @@ import {
   UploadedFiles,
   Get,
   Patch,
+  Query,
 } from "@nestjs/common";
 import { ShopService } from "./shop.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
@@ -21,7 +22,7 @@ import { SwaggerConsumes } from "src/common/enums/swagger-consumes.enum";
 import { Auth } from "src/common/decorators/auth.decorator";
 import { RoleNames } from "../role/enums/role.enum";
 import { UploadFilesInterceptor } from "src/common/interceptors/uploadFiles.interceptor";
-import { FileUploadDto } from "./dto/file-upload.dto";
+import { FileUploadDto, GetShopFilesDto } from "./dto/file.dto";
 import { FileType } from "./enums/shop-file-type.enum";
 import {
   UploadShopContractDto,
@@ -71,6 +72,22 @@ export class ShopController {
       files.files
     );
   }
+
+  @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
+  @Get("/:shopId/files")
+  @ApiOperation({ summary: "get shop files based on file type" })
+  @ApiResponse({
+    status: 200,
+    description: "shop file list received successfully",
+  })
+  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
+  findShopFilesByType(
+    @Param("shopId", ParseIntPipe) shopId: number,
+    @Query() getShopFilesDto: GetShopFilesDto
+  ) {
+    return this.shopService.findShopFilesByType(shopId, getShopFilesDto);
+  }
+
   @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
   @Post("/:shopId/upload-document")
   @ApiConsumes(SwaggerConsumes.MultipartData)

@@ -23,6 +23,7 @@ import { VerificationStatus } from "./enums/shop.enum";
 import { ShopLocation } from "./entities/Shop-location.entity";
 import { UpdateShopLocationDto } from "./dto/update-shop-location.dto";
 import { UpdateShopDto } from "./dto/update-shop.dto";
+import { GetShopFilesDto } from "./dto/file.dto";
 
 @Injectable({ scope: Scope.REQUEST })
 export class ShopService {
@@ -153,6 +154,21 @@ export class ShopService {
     }
     return {
       message: "Files uploaded successfully",
+    };
+  }
+  async findShopFilesByType(shopId: number, getShopFilesDto: GetShopFilesDto) {
+    const { fileType } = getShopFilesDto;
+
+    const shop = await this.findOneById(shopId);
+
+    const files = await this.shopFileRepository.find({
+      where: { shopId: shop.id, fileType },
+      select: ["id", "fileType", "fileUrl", "isActive", "createdAt"],
+    });
+
+    return {
+      message: "shop file list received successfully",
+      files,
     };
   }
   private getMaxFilesAllowed(fileType: FileType): number {

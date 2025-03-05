@@ -1,16 +1,15 @@
 import { BaseEntity } from "src/common/abstracts/base.entity";
 import { ShopUserRole } from "src/modules/role/entities/shop-user-role.entity";
-import { Column, Entity, JoinColumn, OneToMany, OneToOne } from "typeorm";
+import { Column, Entity, OneToMany, OneToOne } from "typeorm";
 import { ShopStatus, VerificationStatus } from "../enums/shop.enum";
-import { Location } from "./location.entity";
 import { ShopFile } from "./shop-file.entity";
+import { ShopLocation } from "./Shop-location.entity";
 
 @Entity("shops")
 export class Shop extends BaseEntity {
   @Column()
   name: string;
-  @Column({ nullable: true })
-  address: string;
+
   @Column({ nullable: true })
   bio: string;
 
@@ -27,9 +26,8 @@ export class Shop extends BaseEntity {
   email: string;
   @Column({ nullable: true })
   password: string;
-  @OneToOne(() => Location, (location) => location.shop)
-  @JoinColumn()
-  location: Location;
+  @OneToOne(() => ShopLocation, (location) => location.shop)
+  location: ShopLocation;
   @OneToMany(() => ShopUserRole, (shopUserRole) => shopUserRole.shop)
   userRoles: ShopUserRole[];
   @OneToMany(() => ShopFile, (shopFile) => shopFile.shop)

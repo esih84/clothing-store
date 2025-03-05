@@ -3,8 +3,8 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  NotFoundException,
   Scope,
-  UnauthorizedException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Shop } from "./entities/shop.entity";
@@ -15,11 +15,13 @@ import { Request } from "express";
 import { RoleService } from "../role/role.service";
 import { RoleNames } from "../role/enums/role.enum";
 import { ShopFile } from "./entities/shop-file.entity";
-import { FileUploadDto } from "./dto/file-upload.dto";
 import { FileType } from "./enums/shop-file-type.enum";
 import { S3Service } from "../s3/s3.service";
 import { ShopUserRole } from "../role/entities/shop-user-role.entity";
 import { VerificationStatus } from "./enums/shop.enum";
+
+import { ShopLocation } from "./entities/Shop-location.entity";
+import { UpdateShopLocationDto } from "./dto/update-shop-location.dto";
 
 @Injectable({ scope: Scope.REQUEST })
 export class ShopService {
@@ -28,8 +30,8 @@ export class ShopService {
     private shopRepository: Repository<Shop>,
     @InjectRepository(ShopFile)
     private shopFileRepository: Repository<ShopFile>,
-    @InjectRepository(ShopUserRole)
-    private shopUserRoleRepository: Repository<ShopUserRole>,
+    @InjectRepository(ShopLocation)
+    private shopLocationRepository: Repository<ShopLocation>,
     private s3Service: S3Service,
     private roleService: RoleService,
     @Inject(REQUEST) private request: Request,
@@ -216,5 +218,49 @@ export class ShopService {
       count,
       shops: userShops.map((userShop) => userShop.shop),
     };
+  }
+  async updateShopLocation(
+    shopId: number,
+    updateShopLocationDto: UpdateShopLocationDto
+  ) {
+    const { city, lat, lng, addressDetails } = updateShopLocationDto;
+    const shop = await this.findOneById(shopId);
+
+    let location = await this.shopLocationRepository.findOne({
+      where: { shopId: shop.id },
+    });
+
+    if (!location) {
+      location = this.shopLocationRepository.create({
+        shopId: shop.id,
+        city,
+        location: `(${lat}, ${lng})`,
+        addressDetails,
+      });
+    } else {
+      location.city = city;
+      location.location = `(${lat}, ${lng})`;
+      location.addressDetails = addressDetails;
+    }
+
+    await this.shopLocationRepository.save(location);
+
+    return {
+      message: "Shop location updated successfully",
+      location,
+    };
+  }
+  async getShopLocation(shopId: number) {
+    const shop = await this.findOneById(shopId);
+
+    const location = await this.shopLocationRepository.findOne({
+      where: { shopId },
+    });
+
+    if (!location) {
+      throw new NotFoundException("Location not found for the specified shop");
+    }
+
+    return location;
   }
 }

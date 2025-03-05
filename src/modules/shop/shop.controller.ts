@@ -26,6 +26,7 @@ import {
   UploadShopContractDto,
   UploadShopDocumentDto,
 } from "./dto/doc-upload.dto";
+import { UpdateShopLocationDto } from "./dto/update-shop-location.dto";
 
 @Controller("shop")
 export class ShopController {
@@ -84,6 +85,33 @@ export class ShopController {
       FileType.CONTRACT,
       files.contract
     );
+  }
+
+  @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
+  @Post("/:shopId/update-location")
+  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
+  @ApiOperation({ summary: "Update shop location" })
+  @ApiResponse({
+    status: 200,
+    description: "Shop location updated successfully",
+  })
+  updateShopLocation(
+    @Param("shopId", ParseIntPipe) shopId: number,
+    @Body() updateShopLocationDto: UpdateShopLocationDto
+  ) {
+    return this.shopService.updateShopLocation(shopId, updateShopLocationDto);
+  }
+
+  @Auth()
+  @Get("/:shopId/location")
+  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
+  @ApiOperation({ summary: "Get shop location" })
+  @ApiResponse({
+    status: 200,
+    description: "Shop location retrieved successfully",
+  })
+  getShopLocation(@Param("shopId", ParseIntPipe) shopId: number) {
+    return this.shopService.getShopLocation(shopId);
   }
 
   @Auth()

@@ -7,10 +7,11 @@ import { AuthModule } from "../auth/auth.module";
 import { RoleModule } from "../role/role.module";
 import { ShopFile } from "./entities/shop-file.entity";
 import { S3Service } from "../s3/s3.service";
+import { ShopLocation } from "./entities/Shop-location.entity";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Shop, ShopFile]),
+    TypeOrmModule.forFeature([Shop, ShopFile, ShopLocation]),
     forwardRef(() => AuthModule),
 
     RoleModule,

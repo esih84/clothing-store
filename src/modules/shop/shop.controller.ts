@@ -7,6 +7,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   Get,
+  Patch,
 } from "@nestjs/common";
 import { ShopService } from "./shop.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
@@ -27,6 +28,7 @@ import {
   UploadShopDocumentDto,
 } from "./dto/doc-upload.dto";
 import { UpdateShopLocationDto } from "./dto/update-shop-location.dto";
+import { UpdateShopDto } from "./dto/update-shop.dto";
 
 @Controller("shop")
 export class ShopController {
@@ -39,6 +41,18 @@ export class ShopController {
   @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
   create(@Body() createShopDto: CreateShopDto) {
     return this.shopService.create(createShopDto);
+  }
+
+  @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
+  @Patch("/:shopId/update")
+  @ApiOperation({ summary: "Update shop details" })
+  @ApiResponse({ status: 200, description: "Shop updated successfully" })
+  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
+  updateShop(
+    @Param("shopId", ParseIntPipe) shopId: number,
+    @Body() updateShopDto: UpdateShopDto
+  ) {
+    return this.shopService.updateShop(shopId, updateShopDto);
   }
 
   @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)

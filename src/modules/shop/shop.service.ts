@@ -22,6 +22,7 @@ import { VerificationStatus } from "./enums/shop.enum";
 
 import { ShopLocation } from "./entities/Shop-location.entity";
 import { UpdateShopLocationDto } from "./dto/update-shop-location.dto";
+import { UpdateShopDto } from "./dto/update-shop.dto";
 
 @Injectable({ scope: Scope.REQUEST })
 export class ShopService {
@@ -59,6 +60,30 @@ export class ShopService {
     return {
       message: "Shop created successfully",
       shop: newShop,
+    };
+  }
+  async updateShop(shopId: number, updateShopDto: UpdateShopDto) {
+    const { name } = updateShopDto;
+    const shop = await this.findOneById(shopId);
+
+    if (name && name !== shop.name) {
+      const shopWithSameName = await this.findOneByName(name);
+      if (shopWithSameName && shopWithSameName.id !== shop.id)
+        throw new ConflictException("Shop name already in use");
+      shop.name = updateShopDto.name;
+    }
+    Object.assign(shop, updateShopDto);
+
+    await this.shopRepository.save(shop);
+
+    return {
+      message: "Shop updated successfully",
+      shop: {
+        id: shop.id,
+        name: shop.name,
+        bio: shop.bio,
+        status: shop.status,
+      },
     };
   }
   async findOneByName(name: string) {

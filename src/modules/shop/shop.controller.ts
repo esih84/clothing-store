@@ -75,6 +75,21 @@ export class ShopController {
   }
 
   @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
+  @Patch("/:shopId/files/:fileId/toggle-activation")
+  @ApiOperation({ summary: "Toggle file activation(banner, logo, video)" })
+  @ApiResponse({
+    status: 200,
+    description: "File status changed successfully.",
+  })
+  @ApiResponse({ status: 404, description: "File not found." })
+  async toggleFileActivation(
+    @Param("shopId", ParseIntPipe) shopId: number,
+    @Param("fileId", ParseIntPipe) fileId: number
+  ) {
+    return this.shopService.toggleFileActivation(shopId, fileId);
+  }
+
+  @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
   @Get("/:shopId/files")
   @ApiOperation({ summary: "get shop files based on file type" })
   @ApiResponse({
@@ -117,6 +132,21 @@ export class ShopController {
       FileType.CONTRACT,
       files.contract
     );
+  }
+
+  @Auth(RoleNames.ADMIN)
+  @Patch("/:shopId/files/:fileId/toggle-activation/all")
+  @ApiOperation({ summary: "Toggle file activation (all file types)" })
+  @ApiResponse({
+    status: 200,
+    description: "File status changed successfully.",
+  })
+  @ApiResponse({ status: 404, description: "File not found." })
+  toggleFileActivationAdmin(
+    @Param("shopId", ParseIntPipe) shopId: number,
+    @Param("fileId", ParseIntPipe) fileId: number
+  ) {
+    return this.shopService.toggleFileActivationAdmin(shopId, fileId);
   }
 
   @Auth(RoleNames.ADMIN)

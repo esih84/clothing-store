@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
   Scope,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Shop } from "./entities/shop.entity";
@@ -157,6 +158,84 @@ export class ShopService {
       message: "Files uploaded successfully",
     };
   }
+
+  /**
+   * Toggles the activation status of a file for a given shop.
+   *
+   * If the file is currently active, it will be deactivated.
+   * If the file is inactive, it will be activated and any other active files of the same type will be deactivated.
+   *
+   * @param shopId - The ID of the shop.
+   * @param fileId - The ID of the file to toggle.
+   * @throws {NotFoundException} If the file is not found.
+   */
+  async toggleFileActivation(shopId: number, fileId: number) {
+    const file = await this.shopFileRepository.findOne({
+      where: { id: fileId, shopId },
+    });
+
+    if (!file) {
+      throw new NotFoundException("File not found");
+    }
+    if ([FileType.CONTRACT, FileType.DOC].includes(file.fileType)) {
+      throw new UnauthorizedException(
+        "You are not authorized to activate this file type"
+      );
+    }
+    if (file.isActive) {
+      file.isActive = false;
+      await this.shopFileRepository.save(file);
+      return { message: `${file.fileType} deactivated successfully`, file };
+    }
+    const activeFile = await this.shopFileRepository.count({
+      where: { shopId, fileType: file.fileType, isActive: true },
+    });
+    if (activeFile > 0) {
+      await this.shopFileRepository.update(
+        { shopId, fileType: file.fileType, isActive: true },
+        { isActive: false }
+      );
+    }
+
+    file.isActive = true;
+    await this.shopFileRepository.save(file);
+
+    return { message: `${file.fileType} activated successfully`, file };
+  }
+
+  // This method allows an admin to toggle the activation status of a file
+  /**
+   * Toggles the activation status of a file for a given shop.
+   *
+   * If the file is currently active, it will be deactivated. If the file is inactive,
+   * it will be activated and any other active files of the same type will be deactivated.
+   *
+   * @param {number} shopId - The ID of the shop.
+   * @param {number} fileId - The ID of the file to toggle.
+   * @throws {NotFoundException} - If the file is not found.
+   */
+  async toggleFileActivationAdmin(shopId: number, fileId: number) {
+    const file = await this.shopFileRepository.findOne({
+      where: { id: fileId, shopId },
+    });
+    if (!file) {
+      throw new NotFoundException("File not found");
+    }
+    if (file.isActive) {
+      file.isActive = false;
+      await this.shopFileRepository.save(file);
+      return { message: "File deactivated successfully", file };
+    }
+    // Deactivate other active files of the same type
+    await this.shopFileRepository.update(
+      { shopId, fileType: file.fileType, isActive: true },
+      { isActive: false }
+    );
+    file.isActive = true;
+    await this.shopFileRepository.save(file);
+    return { message: `${file.fileType} activated successfully`, file };
+  }
+
   async findShopFilesByType(shopId: number, getShopFilesDto: GetShopFilesDto) {
     const { fileType } = getShopFilesDto;
 

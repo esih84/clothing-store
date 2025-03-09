@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { FileType } from "../enums/shop-file-type.enum";
-import { IsEnum } from "class-validator";
+import { IsArray, IsEnum, IsNumber } from "class-validator";
 
 export class FileUploadDto {
   @ApiProperty({
@@ -18,4 +18,11 @@ export class GetShopFilesDto {
   @ApiProperty({ enum: [FileType.BANNER, FileType.LOGO, FileType.VIDEO] })
   @IsEnum(FileType)
   fileType: FileType.BANNER | FileType.LOGO | FileType.VIDEO;
+}
+
+export class ToggleFilesDto {
+  @ApiProperty({ type: [Number], description: "List of file IDs to toggle" })
+  @IsArray()
+  @IsNumber({}, { each: true })
+  fileIds: number[];
 }

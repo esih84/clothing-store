@@ -9,6 +9,7 @@ import {
   Get,
   Patch,
   Query,
+  Delete,
 } from "@nestjs/common";
 import { ShopService } from "./shop.service";
 import { CreateShopDto } from "./dto/create-shop.dto";
@@ -22,7 +23,7 @@ import { SwaggerConsumes } from "src/common/enums/swagger-consumes.enum";
 import { Auth } from "src/common/decorators/auth.decorator";
 import { RoleNames } from "../role/enums/role.enum";
 import { UploadFilesInterceptor } from "src/common/interceptors/uploadFiles.interceptor";
-import { FileUploadDto, GetShopFilesDto } from "./dto/file.dto";
+import { FileUploadDto, GetShopFilesDto, ToggleFilesDto } from "./dto/file.dto";
 import { FileType } from "./enums/shop-file-type.enum";
 import {
   GetShopDocsDto,
@@ -75,33 +76,80 @@ export class ShopController {
   }
 
   @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
-  @Patch("/:shopId/files/:fileId/toggle-activation")
-  @ApiOperation({ summary: "Toggle file activation(banner, logo, video)" })
+  @Patch("/:shopId/files/toggle-activation")
+  @ApiOperation({ summary: "Toggle activation for multiple files" })
   @ApiResponse({
     status: 200,
-    description: "File status changed successfully.",
+    description: "Files status updated successfully.",
   })
-  @ApiResponse({ status: 404, description: "File not found." })
-  async toggleFileActivation(
+  @ApiResponse({ status: 404, description: "One or more files not found." })
+  @ApiResponse({ status: 400, description: "File activation limit exceeded." })
+  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
+  async toggleFilesActivation(
     @Param("shopId", ParseIntPipe) shopId: number,
-    @Param("fileId", ParseIntPipe) fileId: number
+    @Body() toggleFilesDto: ToggleFilesDto
   ) {
-    return this.shopService.toggleFileActivation(shopId, fileId);
+    return this.shopService.toggleFilesActivationGeneric(
+      shopId,
+      toggleFilesDto,
+      [FileType.VIDEO, FileType.LOGO, FileType.BANNER]
+    );
+  }
+
+  @Auth(RoleNames.ADMIN)
+  @Patch("/admin/:shopId/files/toggle-activation")
+  @ApiOperation({ summary: "Toggle activation for multiple files" })
+  @ApiResponse({
+    status: 200,
+    description: "Files status updated successfully.",
+  })
+  @ApiResponse({ status: 404, description: "One or more files not found." })
+  @ApiResponse({ status: 400, description: "File activation limit exceeded." })
+  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
+  async toggleFilesActivationAdmin(
+    @Param("shopId", ParseIntPipe) shopId: number,
+    @Body() toggleFilesDto: ToggleFilesDto
+  ) {
+    return this.shopService.toggleFilesActivationGeneric(
+      shopId,
+      toggleFilesDto
+    );
   }
 
   @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
-  @Get("/:shopId/files")
-  @ApiOperation({ summary: "get shop files based on file type" })
+  @Delete("/:shopId/files/delete")
+  @ApiOperation({ summary: "Delete files" })
   @ApiResponse({
     status: 200,
-    description: "shop file list received successfully",
+    description: "Files deleted successfully.",
   })
+  @ApiResponse({ status: 404, description: "One or more files not found." })
   @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
-  findShopFilesByType(
-    @Param("shopId", ParseIntPipe) shopId: number,
-    @Query() getShopFilesDto: GetShopFilesDto
+  SoftDeleteFiles(
+    @Param("shopId") shopId: number,
+    @Body() deleteFilesDto: ToggleFilesDto
   ) {
-    return this.shopService.findShopFilesByType(shopId, getShopFilesDto);
+    return this.shopService.SoftDeleteFiles(shopId, deleteFilesDto, [
+      FileType.VIDEO,
+      FileType.LOGO,
+      FileType.BANNER,
+    ]);
+  }
+
+  @Auth(RoleNames.ADMIN)
+  @Delete("/admin/:shopId/files/SoftDelete")
+  @ApiOperation({ summary: "Delete files by admin" })
+  @ApiResponse({
+    status: 200,
+    description: "Files deleted successfully.",
+  })
+  @ApiResponse({ status: 404, description: "One or more files not found." })
+  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
+  SoftDeleteFilesByAdmin(
+    @Param("shopId") shopId: number,
+    @Body() deleteFilesDto: ToggleFilesDto
+  ) {
+    return this.shopService.SoftDeleteFiles(shopId, deleteFilesDto);
   }
 
   @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
@@ -134,19 +182,19 @@ export class ShopController {
     );
   }
 
-  @Auth(RoleNames.ADMIN)
-  @Patch("/:shopId/files/:fileId/toggle-activation/all")
-  @ApiOperation({ summary: "Toggle file activation (all file types)" })
+  @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
+  @Get("/:shopId/files")
+  @ApiOperation({ summary: "get shop files based on file type" })
   @ApiResponse({
     status: 200,
-    description: "File status changed successfully.",
+    description: "shop file list received successfully",
   })
-  @ApiResponse({ status: 404, description: "File not found." })
-  toggleFileActivationAdmin(
+  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
+  findShopFilesByType(
     @Param("shopId", ParseIntPipe) shopId: number,
-    @Param("fileId", ParseIntPipe) fileId: number
+    @Query() getShopFilesDto: GetShopFilesDto
   ) {
-    return this.shopService.toggleFileActivationAdmin(shopId, fileId);
+    return this.shopService.findShopFilesByType(shopId, getShopFilesDto);
   }
 
   @Auth(RoleNames.ADMIN)

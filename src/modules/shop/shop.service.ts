@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Inject,
   Injectable,
   NotFoundException,
@@ -9,7 +10,7 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Shop } from "./entities/shop.entity";
-import { DataSource, DeepPartial, Repository } from "typeorm";
+import { DataSource, DeepPartial, In, Repository } from "typeorm";
 import { CreateShopDto } from "./dto/create-shop.dto";
 import { REQUEST } from "@nestjs/core";
 import { Request } from "express";
@@ -24,7 +25,7 @@ import { VerificationStatus } from "./enums/shop.enum";
 import { ShopLocation } from "./entities/Shop-location.entity";
 import { UpdateShopLocationDto } from "./dto/update-shop-location.dto";
 import { UpdateShopDto } from "./dto/update-shop.dto";
-import { GetShopFilesDto } from "./dto/file.dto";
+import { GetShopFilesDto, ToggleFilesDto } from "./dto/file.dto";
 import { GetShopDocsDto } from "./dto/document.dto";
 
 @Injectable({ scope: Scope.REQUEST })
@@ -159,81 +160,143 @@ export class ShopService {
     };
   }
 
-  /**
-   * Toggles the activation status of a file for a given shop.
-   *
-   * If the file is currently active, it will be deactivated.
-   * If the file is inactive, it will be activated and any other active files of the same type will be deactivated.
-   *
-   * @param shopId - The ID of the shop.
-   * @param fileId - The ID of the file to toggle.
-   * @throws {NotFoundException} If the file is not found.
-   */
-  async toggleFileActivation(shopId: number, fileId: number) {
-    const file = await this.shopFileRepository.findOne({
-      where: { id: fileId, shopId },
+  async toggleFilesActivationGeneric(
+    shopId: number,
+    toggleFilesDto: ToggleFilesDto,
+    allowedFileTypes?: FileType[]
+  ) {
+    const { fileIds } = toggleFilesDto;
+    const files = await this.shopFileRepository.find({
+      where: { id: In(fileIds), shopId },
     });
 
-    if (!file) {
-      throw new NotFoundException("File not found");
+    if (files.length !== fileIds.length) {
+      throw new NotFoundException("One or more files not found");
     }
-    if ([FileType.CONTRACT, FileType.DOC].includes(file.fileType)) {
-      throw new UnauthorizedException(
-        "You are not authorized to activate this file type"
-      );
-    }
-    if (file.isActive) {
-      file.isActive = false;
-      await this.shopFileRepository.save(file);
-      return { message: `${file.fileType} deactivated successfully`, file };
-    }
-    const activeFile = await this.shopFileRepository.count({
-      where: { shopId, fileType: file.fileType, isActive: true },
+
+    const fileGroups = new Map<FileType, ShopFile[]>();
+    files.forEach((file) => {
+      if (!fileGroups.has(file.fileType)) {
+        fileGroups.set(file.fileType, []);
+      }
+      fileGroups.get(file.fileType).push(file);
     });
-    if (activeFile > 0) {
-      await this.shopFileRepository.update(
-        { shopId, fileType: file.fileType, isActive: true },
-        { isActive: false }
-      );
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      for (const [fileType, selectedFiles] of fileGroups.entries()) {
+        if (allowedFileTypes && !allowedFileTypes.includes(fileType)) {
+          throw new UnauthorizedException(
+            "You do not have permission to change the activation status of these files"
+          );
+        }
+
+        const maxAllowed = this.getMaxActiveFiles(fileType);
+
+        const filesToDeactivate = selectedFiles.filter((file) => file.isActive);
+        const filesToActivate = selectedFiles.filter((file) => !file.isActive);
+
+        if (filesToDeactivate.length > 0) {
+          await queryRunner.manager.update(
+            ShopFile,
+            { id: In(filesToDeactivate.map((file) => file.id)) },
+            { isActive: false }
+          );
+        }
+
+        if (filesToActivate.length > 0) {
+          const activeFiles = await queryRunner.manager.find(ShopFile, {
+            where: { shopId, fileType, isActive: true },
+          });
+
+          if (activeFiles.length + filesToActivate.length > maxAllowed) {
+            if (maxAllowed === filesToActivate.length) {
+              await queryRunner.manager.update(
+                ShopFile,
+                { id: In(activeFiles.map((file) => file.id)) },
+                { isActive: false }
+              );
+            } else {
+              throw new BadRequestException(
+                `Cannot activate more than ${maxAllowed} ${fileType.toLowerCase()} files`
+              );
+            }
+          }
+
+          await queryRunner.manager.update(
+            ShopFile,
+            { id: In(filesToActivate.map((file) => file.id)) },
+            { isActive: true }
+          );
+        }
+      }
+      await queryRunner.commitTransaction();
+      await queryRunner.release();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      await queryRunner.release();
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      if (
+        error.response &&
+        error.response.message &&
+        error.response.statusCode
+      ) {
+        throw new HttpException(
+          error.response.message,
+          error.response.statusCode
+        );
+      } else {
+        throw new BadRequestException(
+          error.message || "An unexpected error occurred."
+        );
+      }
     }
 
-    file.isActive = true;
-    await this.shopFileRepository.save(file);
-
-    return { message: `${file.fileType} activated successfully`, file };
+    return { message: "Files activation status updated successfully" };
   }
 
-  // This method allows an admin to toggle the activation status of a file
-  /**
-   * Toggles the activation status of a file for a given shop.
-   *
-   * If the file is currently active, it will be deactivated. If the file is inactive,
-   * it will be activated and any other active files of the same type will be deactivated.
-   *
-   * @param {number} shopId - The ID of the shop.
-   * @param {number} fileId - The ID of the file to toggle.
-   * @throws {NotFoundException} - If the file is not found.
-   */
-  async toggleFileActivationAdmin(shopId: number, fileId: number) {
-    const file = await this.shopFileRepository.findOne({
-      where: { id: fileId, shopId },
+  async SoftDeleteFiles(
+    shopId: number,
+    deleteFilesDto: ToggleFilesDto,
+    allowedFileTypes?: FileType[]
+  ) {
+    const { fileIds } = deleteFilesDto;
+
+    const files = await this.shopFileRepository.find({
+      where: { id: In(fileIds), shopId },
     });
-    if (!file) {
-      throw new NotFoundException("File not found");
+
+    if (files.length !== fileIds.length) {
+      throw new NotFoundException("One or more files not found");
     }
-    if (file.isActive) {
-      file.isActive = false;
-      await this.shopFileRepository.save(file);
-      return { message: "File deactivated successfully", file };
+    for (const file of files) {
+      if (!!allowedFileTypes && !allowedFileTypes.includes(file.fileType)) {
+        throw new UnauthorizedException(
+          `You do not have permission to delete these files`
+        );
+      }
+      file.deletedAt = new Date();
     }
-    // Deactivate other active files of the same type
-    await this.shopFileRepository.update(
-      { shopId, fileType: file.fileType, isActive: true },
-      { isActive: false }
-    );
-    file.isActive = true;
-    await this.shopFileRepository.save(file);
-    return { message: `${file.fileType} activated successfully`, file };
+
+    await this.shopFileRepository.save(files);
+
+    return { message: "Files deleted successfully" };
+  }
+
+  private getMaxActiveFiles(fileType: FileType): number {
+    const maxActiveFilesMap: Record<FileType, number> = {
+      [FileType.LOGO]: 1,
+      [FileType.BANNER]: 2,
+      [FileType.VIDEO]: 1,
+      [FileType.DOC]: 1,
+      [FileType.CONTRACT]: 1,
+    };
+
+    return maxActiveFilesMap[fileType] || 1;
   }
 
   async findShopFilesByType(shopId: number, getShopFilesDto: GetShopFilesDto) {

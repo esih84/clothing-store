@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { Request } from "express";
-import { ShopService } from "../shop.service";
+import { ShopService } from "../services/shop.service";
 import { Reflector } from "@nestjs/core";
 import { ROLES_KEY } from "../decorators/role-in-shop.decorator";
 import { RoleNames } from "src/modules/role/enums/role.enum";

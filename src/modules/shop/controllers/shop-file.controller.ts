@@ -11,8 +11,8 @@ import {
   Query,
   Delete,
 } from "@nestjs/common";
-import { ShopService } from "./shop.service";
-import { CreateShopDto } from "./dto/create-shop.dto";
+import { ShopFileService } from "../services/shop-file.service";
+
 import {
   ApiBody,
   ApiConsumes,
@@ -21,42 +21,23 @@ import {
 } from "@nestjs/swagger";
 import { SwaggerConsumes } from "src/common/enums/swagger-consumes.enum";
 import { Auth } from "src/common/decorators/auth.decorator";
-import { RoleNames } from "../role/enums/role.enum";
+import { RoleNames } from "../../role/enums/role.enum";
 import { UploadFilesInterceptor } from "src/common/interceptors/uploadFiles.interceptor";
-import { FileUploadDto, GetShopFilesDto, ToggleFilesDto } from "./dto/file.dto";
-import { FileType } from "./enums/shop-file-type.enum";
+import {
+  FileUploadDto,
+  GetShopFilesDto,
+  ToggleFilesDto,
+} from "../dto/file.dto";
+import { FileType } from "../enums/shop-file-type.enum";
 import {
   GetShopDocsDto,
   UploadShopContractDto,
   UploadShopDocumentDto,
-} from "./dto/document.dto";
-import { UpdateShopLocationDto } from "./dto/update-shop-location.dto";
-import { UpdateShopDto } from "./dto/update-shop.dto";
+} from "../dto/document.dto";
 
-@Controller("shop")
-export class ShopController {
-  constructor(private readonly shopService: ShopService) {}
-
-  @Post()
-  @Auth()
-  @ApiOperation({ summary: "Create shop" })
-  @ApiResponse({ status: 200, description: "Shop created successfully" })
-  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
-  create(@Body() createShopDto: CreateShopDto) {
-    return this.shopService.create(createShopDto);
-  }
-
-  @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
-  @Patch("/:shopId/update")
-  @ApiOperation({ summary: "Update shop details" })
-  @ApiResponse({ status: 200, description: "Shop updated successfully" })
-  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
-  updateShop(
-    @Param("shopId", ParseIntPipe) shopId: number,
-    @Body() updateShopDto: UpdateShopDto
-  ) {
-    return this.shopService.updateShop(shopId, updateShopDto);
-  }
+@Controller("shop-file")
+export class ShopFileController {
+  constructor(private readonly shopFileService: ShopFileService) {}
 
   @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
   @Post("/:shopId/upload-file")
@@ -68,7 +49,7 @@ export class ShopController {
     files: { files: Express.Multer.File[] },
     @Param("shopId", ParseIntPipe) shopId: number
   ) {
-    return this.shopService.UploadFile(
+    return this.shopFileService.UploadFile(
       shopId,
       fileUploadDto.fileType,
       files.files
@@ -89,7 +70,7 @@ export class ShopController {
     @Param("shopId", ParseIntPipe) shopId: number,
     @Body() toggleFilesDto: ToggleFilesDto
   ) {
-    return this.shopService.toggleFilesActivationGeneric(
+    return this.shopFileService.toggleFilesActivationGeneric(
       shopId,
       toggleFilesDto,
       [FileType.VIDEO, FileType.LOGO, FileType.BANNER]
@@ -110,7 +91,7 @@ export class ShopController {
     @Param("shopId", ParseIntPipe) shopId: number,
     @Body() toggleFilesDto: ToggleFilesDto
   ) {
-    return this.shopService.toggleFilesActivationGeneric(
+    return this.shopFileService.toggleFilesActivationGeneric(
       shopId,
       toggleFilesDto
     );
@@ -129,7 +110,7 @@ export class ShopController {
     @Param("shopId") shopId: number,
     @Body() deleteFilesDto: ToggleFilesDto
   ) {
-    return this.shopService.SoftDeleteFiles(shopId, deleteFilesDto, [
+    return this.shopFileService.SoftDeleteFiles(shopId, deleteFilesDto, [
       FileType.VIDEO,
       FileType.LOGO,
       FileType.BANNER,
@@ -149,7 +130,7 @@ export class ShopController {
     @Param("shopId") shopId: number,
     @Body() deleteFilesDto: ToggleFilesDto
   ) {
-    return this.shopService.SoftDeleteFiles(shopId, deleteFilesDto);
+    return this.shopFileService.SoftDeleteFiles(shopId, deleteFilesDto);
   }
 
   @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
@@ -162,7 +143,7 @@ export class ShopController {
     files: { doc: Express.Multer.File[] },
     @Param("shopId", ParseIntPipe) shopId: number
   ) {
-    return this.shopService.UploadFile(shopId, FileType.DOC, files.doc);
+    return this.shopFileService.UploadFile(shopId, FileType.DOC, files.doc);
   }
 
   @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
@@ -175,7 +156,7 @@ export class ShopController {
     files: { contract: Express.Multer.File[] },
     @Param("shopId", ParseIntPipe) shopId: number
   ) {
-    return this.shopService.UploadFile(
+    return this.shopFileService.UploadFile(
       shopId,
       FileType.CONTRACT,
       files.contract
@@ -194,7 +175,7 @@ export class ShopController {
     @Param("shopId", ParseIntPipe) shopId: number,
     @Query() getShopFilesDto: GetShopFilesDto
   ) {
-    return this.shopService.findShopFilesByType(shopId, getShopFilesDto);
+    return this.shopFileService.findShopFilesByType(shopId, getShopFilesDto);
   }
 
   @Auth(RoleNames.ADMIN)
@@ -209,43 +190,6 @@ export class ShopController {
     @Param("shopId", ParseIntPipe) shopId: number,
     @Query() getShopDocsDto: GetShopDocsDto
   ) {
-    return this.shopService.findShopDocsByType(shopId, getShopDocsDto);
-  }
-  @Auth(RoleNames.ADMIN, RoleNames.ADMIN_SHOP)
-  @Post("/:shopId/update-location")
-  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
-  @ApiOperation({ summary: "Update shop location" })
-  @ApiResponse({
-    status: 200,
-    description: "Shop location updated successfully",
-  })
-  updateShopLocation(
-    @Param("shopId", ParseIntPipe) shopId: number,
-    @Body() updateShopLocationDto: UpdateShopLocationDto
-  ) {
-    return this.shopService.updateShopLocation(shopId, updateShopLocationDto);
-  }
-
-  @Auth()
-  @Get("/:shopId/location")
-  @ApiConsumes(SwaggerConsumes.UrlEncoded, SwaggerConsumes.Json)
-  @ApiOperation({ summary: "Get shop location" })
-  @ApiResponse({
-    status: 200,
-    description: "Shop location retrieved successfully",
-  })
-  getShopLocation(@Param("shopId", ParseIntPipe) shopId: number) {
-    return this.shopService.getShopLocation(shopId);
-  }
-
-  @Auth()
-  @ApiOperation({ summary: "show all user stores" })
-  @ApiResponse({
-    status: 200,
-    description: "User stores were successfully found.",
-  })
-  @Get("/find-all-user-shops")
-  findAllUserShops() {
-    return this.shopService.findAllUserShops();
+    return this.shopFileService.findShopDocsByType(shopId, getShopDocsDto);
   }
 }

@@ -4,6 +4,9 @@ export enum ShopStatus {
 }
 
 export enum VerificationStatus {
-  VERIFIED = "verified",
   UNVERIFIED = "unverified",
+  SHOP_DOCUMENT_UPLOADED = "SHOP_DOCUMENT_UPLOADED",
+  CONTRACT = "CONTRACT",
+  IN_PROGRESS = "IN_PROGRESS",
+  VERIFIED = "verified",
 }

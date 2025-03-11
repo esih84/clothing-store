@@ -4,3 +4,4 @@ export enum RoleNames {
   STORE_WORKER = "storeWorker",
   USER = "user",
 }
+//TODO add owner role

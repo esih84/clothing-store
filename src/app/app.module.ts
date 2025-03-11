@@ -7,6 +7,7 @@ import { ConfigModule } from "@nestjs/config";
 import { AuthModule } from "src/modules/auth/auth.module";
 import { UserModule } from "src/modules/user/user.module";
 import { RoleModule } from "src/modules/role/role.module";
+import { ShopModule } from "src/modules/shop/shop.module";
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { RoleModule } from "src/modules/role/role.module";
     TypeOrmModule.forRoot(TypeormConfig()),
     AuthModule,
     UserModule,
+    ShopModule,
     RoleModule,
   ],
   controllers: [AppController],

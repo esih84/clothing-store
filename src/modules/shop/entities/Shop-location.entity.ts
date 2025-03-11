@@ -2,19 +2,17 @@ import { BaseEntity } from "src/common/abstracts/base.entity";
 import { Column, Entity, OneToOne } from "typeorm";
 import { Shop } from "./shop.entity";
 
-@Entity("locations")
-export class Location extends BaseEntity {
-  @Column({ nullable: true })
+@Entity("shop_location")
+export class ShopLocation extends BaseEntity {
+  @Column("point", { nullable: true })
   location: string;
 
   @Column({ nullable: true })
-  lat: string;
-
-  @Column({ nullable: true })
-  lng: string;
-
-  @Column({ nullable: true })
+  addressDetails: string;
+  @Column()
   city: string;
+  @Column()
+  shopId: number;
   @OneToOne(() => Shop, (shop) => shop.location, { onDelete: "SET NULL" })
   shop: Shop;
 }

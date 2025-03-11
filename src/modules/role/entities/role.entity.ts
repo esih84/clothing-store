@@ -7,8 +7,10 @@ import { RoleNames } from "../enums/role.enum";
 export class Role extends BaseEntity {
   @Column({ type: "enum", enum: RoleNames, unique: true })
   name: RoleNames;
+  @Column({ default: false })
+  isForShop: boolean;
   @Column({ default: true })
   isActive: boolean;
-  @OneToMany(() => ShopUserRole, (shopUser) => shopUser.roles)
+  @OneToMany(() => ShopUserRole, (shopUser) => shopUser.role)
   users: ShopUserRole[];
 }

@@ -8,6 +8,7 @@ import { AuthModule } from "src/modules/auth/auth.module";
 import { UserModule } from "src/modules/user/user.module";
 import { RoleModule } from "src/modules/role/role.module";
 import { ShopModule } from "src/modules/shop/shop.module";
+import { CategoryModule } from "src/modules/category/category.module";
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ShopModule } from "src/modules/shop/shop.module";
     AuthModule,
     UserModule,
     ShopModule,
+    CategoryModule,
     RoleModule,
   ],
   controllers: [AppController],

@@ -1,10 +1,10 @@
 import { BaseEntity } from "src/common/abstracts/base.entity";
 import { ShopUserRole } from "src/modules/role/entities/shop-user-role.entity";
-import { Column, Entity, OneToMany, OneToOne } from "typeorm";
+import { Column, Entity, ManyToOne, OneToMany, OneToOne } from "typeorm";
 import { ShopStatus, VerificationStatus } from "../enums/shop.enum";
 import { ShopFile } from "./shop-file.entity";
 import { ShopLocation } from "./Shop-location.entity";
-
+import { Category } from "../../category/entities/category.entity";
 @Entity("shops")
 export class Shop extends BaseEntity {
   @Column()
@@ -32,4 +32,6 @@ export class Shop extends BaseEntity {
   userRoles: ShopUserRole[];
   @OneToMany(() => ShopFile, (shopFile) => shopFile.shop)
   files: ShopFile[];
+  @ManyToOne(() => Category, (category) => category.shops)
+  category: Category;
 }

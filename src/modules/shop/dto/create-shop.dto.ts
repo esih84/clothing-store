@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsString, IsNotEmpty, IsOptional, Length } from "class-validator";
+import { Type } from "class-transformer";
+import { IsString, IsNotEmpty, Length, IsNumber } from "class-validator";
 
 export class CreateShopDto {
   @IsString()
@@ -7,4 +8,9 @@ export class CreateShopDto {
   @ApiProperty()
   @Length(2, 60)
   name: string;
+
+  @ApiProperty()
+  @IsNumber()
+  @Type(() => Number)
+  categoryId: number;
 }

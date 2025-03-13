@@ -19,6 +19,7 @@ import { ShopUserRole } from "../../role/entities/shop-user-role.entity";
 import { ShopLocation } from "../entities/Shop-location.entity";
 import { UpdateShopLocationDto } from "../dto/update-shop-location.dto";
 import { UpdateShopDto } from "../dto/update-shop.dto";
+import { CategoryService } from "src/modules/category/category.service";
 
 @Injectable({ scope: Scope.REQUEST })
 export class ShopService {
@@ -30,11 +31,13 @@ export class ShopService {
     private shopLocationRepository: Repository<ShopLocation>,
     private roleService: RoleService,
     @Inject(REQUEST) private request: Request,
-    private dataSource: DataSource
+    private dataSource: DataSource,
+    private categoryService: CategoryService
   ) {}
 
   async create(createShopDto: CreateShopDto) {
-    const { name } = createShopDto;
+    const { name, categoryId } = createShopDto;
+    const category = await this.categoryService.findOne(categoryId);
     const user = this.request["user"];
     //? Check if the shop already exists
     const existingShop = await this.findOneByName(name);
@@ -42,7 +45,10 @@ export class ShopService {
       throw new ConflictException("Shop already exists");
     }
     //? Create a new shop entity
-    const newShop = this.shopRepository.create({ name });
+    const newShop = this.shopRepository.create({
+      name,
+      categoryId: category.id,
+    });
     await this.shopRepository.save(newShop);
 
     //? Assign the adminShop role to the user
@@ -56,6 +62,7 @@ export class ShopService {
       shop: newShop,
     };
   }
+
   async updateShop(shopId: number, updateShopDto: UpdateShopDto) {
     const { name } = updateShopDto;
     const shop = await this.findOneById(shopId);

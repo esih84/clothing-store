@@ -4,36 +4,16 @@ import {
   Post,
   Param,
   ParseIntPipe,
-  UseInterceptors,
-  UploadedFiles,
   Get,
   Patch,
-  Query,
-  Delete,
 } from "@nestjs/common";
 import { ShopService } from "../services/shop.service";
 import { CreateShopDto } from "../dto/create-shop.dto";
-import {
-  ApiBody,
-  ApiConsumes,
-  ApiOperation,
-  ApiResponse,
-} from "@nestjs/swagger";
+import { ApiConsumes, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { SwaggerConsumes } from "src/common/enums/swagger-consumes.enum";
 import { Auth } from "src/common/decorators/auth.decorator";
 import { RoleNames } from "../../role/enums/role.enum";
-import { UploadFilesInterceptor } from "src/common/interceptors/uploadFiles.interceptor";
-import {
-  FileUploadDto,
-  GetShopFilesDto,
-  ToggleFilesDto,
-} from "../dto/file.dto";
-import { FileType } from "../enums/shop-file-type.enum";
-import {
-  GetShopDocsDto,
-  UploadShopContractDto,
-  UploadShopDocumentDto,
-} from "../dto/document.dto";
+
 import { UpdateShopLocationDto } from "../dto/update-shop-location.dto";
 import { UpdateShopDto } from "../dto/update-shop.dto";
 

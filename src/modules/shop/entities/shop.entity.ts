@@ -32,6 +32,8 @@ export class Shop extends BaseEntity {
   userRoles: ShopUserRole[];
   @OneToMany(() => ShopFile, (shopFile) => shopFile.shop)
   files: ShopFile[];
+  @Column({ nullable: true })
+  categoryId: number;
   @ManyToOne(() => Category, (category) => category.shops)
   category: Category;
 }

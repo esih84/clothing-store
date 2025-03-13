@@ -6,9 +6,9 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { Request } from "express";
-import { ShopService } from "../services/shop.service";
+import { ShopService } from "../../shop/services/shop.service";
 import { Reflector } from "@nestjs/core";
-import { ROLES_KEY } from "../decorators/role-in-shop.decorator";
+import { ROLES_KEY } from "../../shop/decorators/role-in-shop.decorator";
 import { RoleNames } from "src/modules/role/enums/role.enum";
 import { RoleService } from "src/modules/role/role.service";
 @Injectable()

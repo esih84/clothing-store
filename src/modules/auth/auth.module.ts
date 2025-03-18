@@ -21,12 +21,12 @@ import { RoleModule } from "../role/role.module";
       }),
       inject: [ConfigService],
     }),
-    UserModule,
+    forwardRef(() => UserModule),
     forwardRef(() => ShopModule),
     RoleModule,
   ],
   controllers: [AuthController],
   providers: [AuthService],
-  exports: [TypeOrmModule, AuthService],
+  exports: [TypeOrmModule, AuthService, JwtModule],
 })
 export class AuthModule {}

@@ -4,6 +4,7 @@ import { ShopUserRole } from "src/modules/role/entities/shop-user-role.entity";
 import { Column, Entity, JoinColumn, OneToMany, OneToOne } from "typeorm";
 import { UserDocument } from "./user-document.entity";
 import { UserStatus } from "../enums/user-status.enum";
+import { Blog } from "src/modules/blog/entities/blog.entity";
 
 @Entity()
 export class User extends BaseEntity {
@@ -26,4 +27,6 @@ export class User extends BaseEntity {
   documents: UserDocument[];
   @Column({ type: "enum", enum: UserStatus, default: UserStatus.BASE })
   status: UserStatus;
+  @OneToMany(() => Blog, (blog) => blog.author)
+  blogs: Blog[];
 }

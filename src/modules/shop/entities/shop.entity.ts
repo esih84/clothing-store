@@ -5,6 +5,7 @@ import { ShopStatus, VerificationStatus } from "../enums/shop.enum";
 import { ShopFile } from "./shop-file.entity";
 import { ShopLocation } from "./Shop-location.entity";
 import { Category } from "../../category/entities/category.entity";
+import { Blog } from "src/modules/blog/entities/blog.entity";
 @Entity("shops")
 export class Shop extends BaseEntity {
   @Column()
@@ -36,4 +37,6 @@ export class Shop extends BaseEntity {
   categoryId: number;
   @ManyToOne(() => Category, (category) => category.shops)
   category: Category;
+  @OneToMany(() => Blog, (blog) => blog.shop)
+  blogs: Blog[];
 }

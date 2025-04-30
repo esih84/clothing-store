@@ -242,6 +242,18 @@ export class BlogService {
     return { message: `Blog deleted successfully` };
   }
 
+  /**
+   * Updates an existing blog post with new data, including optional image and category updates.
+   *
+   * @param blogId - The ID of the blog to update.
+   * @param updateBlogDto - Data Transfer Object containing updated blog metadata and content.
+   * @param image - Optional uploaded image file via Multer middleware.
+   * @param shopId - Optional ID for shop association (for shop-specific blogs).
+   * @returns Success message object.
+   * @throws NotFoundException - If the blog with the given ID is not found.
+   * @throws ForbiddenException - If the user is not allowed to update the blog.
+   * @throws BadRequestException - For invalid categories format or non-numeric category IDs.
+   */
   async update(
     blogId: number,
     updateBlogDto: UpdateBlogDto,
@@ -305,7 +317,7 @@ export class BlogService {
         throw new BadRequestException("Enter the categories correctly.");
       }
 
-      // حذف دسته‌های قبلی
+      // Delete previous categories
       await this.blogCategoryRepository.delete({ blogId: blog.id });
 
       let allowedCategories: number[] | null = null;
@@ -326,13 +338,24 @@ export class BlogService {
         allowedCategories
       );
     }
-
+    blog.author = user.id;
     await this.blogRepository.save(blog);
 
     return {
       message: "Blog updated successfully.",
     };
   }
+
+  /**
+   * Validates and inserts categories for a blog post.
+   *
+   * @param blogId - The ID of the blog post to associate the categories with.
+   * @param categories - An array of category IDs (as numbers or strings) to be validated and inserted.
+   * @param allowedCategories - An optional array of allowed category IDs. If provided, only these IDs are permitted.
+   * @throws {BadRequestException} If a category ID is invalid or not allowed.
+   * @throws {BadRequestException} If a category ID does not exist in the database.
+   * @returns A Promise that resolves when all categories have been validated and inserted.
+   */
   private async validateAndInsertCategories(
     blogId: number,
     categories: (number | string)[],

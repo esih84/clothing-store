@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -217,7 +218,36 @@ export class BlogService {
     return `This action updates a #${id} blog`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} blog`;
+  /**
+   * Soft deletes a blog and its associated categories by setting the `deletedAt` timestamp.
+   *
+   * @param blogId - The ID of the blog to be soft deleted.
+   * @throws {NotFoundException} If the blog with the given ID is not found.
+   * @returns An object containing a success message.
+   */
+  async softDelete(blogId: number, shopId: number) {
+    const blog = await this.blogRepository.findOneBy({ id: blogId });
+    if (!blog) {
+      throw new NotFoundException(`Blog not found`);
+    }
+    if (blog.shopId !== shopId) {
+      throw new ForbiddenException(`You are not allowed to delete this blog`);
+    }
+    const now = new Date();
+    blog.deletedAt = now;
+
+    // Update deletedAt for associated categories
+    const blogCategories = await this.blogCategoryRepository.find({
+      where: { blogId },
+    });
+
+    for (const blogCategory of blogCategories) {
+      blogCategory.deletedAt = now;
+    }
+
+    await this.blogCategoryRepository.save(blogCategories);
+    await this.blogRepository.save(blog);
+
+    return { message: `Blog deleted successfully` };
   }
 }

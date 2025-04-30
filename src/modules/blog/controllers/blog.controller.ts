@@ -67,8 +67,17 @@ export class BlogController {
     return this.blogService.update(+id, updateBlogDto);
   }
 
-  @Delete(":id")
-  remove(@Param("id") id: string) {
-    return this.blogService.remove(+id);
+  @Auth(RoleNames.ADMIN_SHOP, RoleNames.STORE_WORKER)
+  @ApiOperation({ summary: "delete blog" })
+  @ApiResponse({
+    status: 200,
+    description: "Blog deleted successfully",
+  })
+  @Delete("/:shopId/:blogId")
+  softDelete(
+    @Param("shopId", ParseIntPipe) shopId: number,
+    @Param("blogId", ParseIntPipe) blogId: number
+  ) {
+    return this.blogService.softDelete(blogId, shopId);
   }
 }

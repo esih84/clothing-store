@@ -139,6 +139,7 @@ export class BlogService {
    */
   private readonly blogSelectRelations: FindOptionsSelect<Blog> = {
     shop: {
+      id: true,
       name: true,
     },
     categories: {

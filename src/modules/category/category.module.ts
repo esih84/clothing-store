@@ -17,5 +17,6 @@ import { ShopModule } from "../shop/shop.module";
   ],
   controllers: [CategoryController],
   providers: [CategoryService, S3Service],
+  exports: [TypeOrmModule, CategoryService],
 })
 export class CategoryModule {}

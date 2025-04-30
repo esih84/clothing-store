@@ -1,4 +1,5 @@
 import { BaseEntity } from "src/common/abstracts/base.entity";
+import { BlogCategory } from "src/modules/blog/entities/blog-category.entity";
 import { Shop } from "src/modules/shop/entities/shop.entity";
 import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
 
@@ -26,4 +27,7 @@ export class Category extends BaseEntity {
 
   @OneToMany(() => Category, (category) => category.parent)
   subcategories: Category[];
+
+  @OneToMany(() => BlogCategory, (blog) => blog.category)
+  blogs: BlogCategory[];
 }

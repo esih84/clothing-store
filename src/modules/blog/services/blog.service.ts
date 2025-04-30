@@ -266,7 +266,10 @@ export class BlogService {
     if (!blog) {
       throw new NotFoundException(`Blog not found`);
     }
-
+    let shop: Shop | null = null;
+    if (shopId) {
+      shop = await this.shopService.findOneById(shopId);
+    }
     if (shopId && blog.shopId !== shopId) {
       throw new ForbiddenException(`You are not allowed to update this blog`);
     }
@@ -308,7 +311,6 @@ export class BlogService {
 
       blog.slug = slug;
     }
-
     // Handle category update
     if (categories) {
       if (!isArray(categories) && typeof categories === "string") {
@@ -316,16 +318,16 @@ export class BlogService {
       } else if (!isArray(categories)) {
         throw new BadRequestException("Enter the categories correctly.");
       }
-
       // Delete previous categories
       await this.blogCategoryRepository.delete({ blogId: blog.id });
 
       let allowedCategories: number[] | null = null;
-      if (shopId) {
+      if (shop) {
         const shopCategory = await this.categoryService.findOne(
-          blog.shopId,
+          shop.categoryId,
           true
         );
+        console.log(shopCategory);
         allowedCategories = shopCategory.subcategories.reduce(
           (acc, sub) => [...acc, sub.id],
           [shopCategory.id]
@@ -338,7 +340,7 @@ export class BlogService {
         allowedCategories
       );
     }
-    blog.author = user.id;
+    blog.authorId = user.id;
     await this.blogRepository.save(blog);
 
     return {

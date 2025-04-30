@@ -9,6 +9,7 @@ import {
   UseInterceptors,
   UploadedFiles,
   ParseIntPipe,
+  Query,
 } from "@nestjs/common";
 import { BlogService } from "../services/blog.service";
 import { CreateBlogDto, UpdateBlogDto } from "../dto/blog.dto";
@@ -17,6 +18,7 @@ import { RoleNames } from "../../role/enums/role.enum";
 import { ApiConsumes, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { SwaggerConsumes } from "src/common/enums/swagger-consumes.enum";
 import { UploadFilesInterceptor } from "src/common/interceptors/uploadFiles.interceptor";
+import { paginationDto } from "src/common/dtos/pagination.dto";
 
 @Controller("blog")
 export class BlogController {
@@ -44,14 +46,20 @@ export class BlogController {
     return this.blogService.create(createBlogDto, file.image, shopId);
   }
 
+  @ApiOperation({ summary: "get all blogs" })
   @Get()
-  findAll() {
-    return this.blogService.findAll();
+  findAll(@Query() paginationDto: paginationDto) {
+    return this.blogService.findAll(paginationDto);
   }
 
-  @Get(":id")
-  findOne(@Param("id") id: string) {
-    return this.blogService.findOne(+id);
+  @Get(":blogId")
+  findOneById(@Param("blogId", ParseIntPipe) blogId: number) {
+    return this.blogService.findOneById(blogId);
+  }
+
+  @Get("by-slug/:slug")
+  findOneBySlug(@Param("slug") slug: string) {
+    return this.blogService.findOneBySlug(slug);
   }
 
   @Patch(":id")

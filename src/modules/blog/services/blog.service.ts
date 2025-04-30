@@ -6,7 +6,7 @@ import {
   Scope,
 } from "@nestjs/common";
 import { CreateBlogDto, UpdateBlogDto } from "../dto/blog.dto";
-import { Repository } from "typeorm";
+import { FindOptionsRelations, FindOptionsSelect, Repository } from "typeorm";
 import { Blog } from "../entities/blog.entity";
 import { ShopService } from "../../shop/services/shop.service";
 import { REQUEST } from "@nestjs/core";
@@ -18,6 +18,12 @@ import { S3Service } from "src/modules/s3/s3.service";
 import { isArray } from "class-validator";
 import { BlogCategory } from "../entities/blog-category.entity";
 import { Shop } from "src/modules/shop/entities/shop.entity";
+import { paginationDto } from "src/common/dtos/pagination.dto";
+import {
+  paginationGenerator,
+  paginationResolver,
+} from "utility/pagination.util";
+
 @Injectable({ scope: Scope.REQUEST })
 export class BlogService {
   constructor(
@@ -126,25 +132,85 @@ export class BlogService {
     return blog;
   }
 
-  async findOneWithSlug(slug: string) {
-    const blog = await this.blogRepository.findOneBy({ slug });
+  /**
+   * Defines the selection relations for the Blog entity used in database queries.
+   * - TODO: Extend the selection to include the `author` relation, specifically the `username` property.
+   */
+  private readonly blogSelectRelations: FindOptionsSelect<Blog> = {
+    shop: {
+      name: true,
+    },
+    categories: {
+      id: true,
+      category: {
+        id: true,
+        name: true,
+        image: true,
+      },
+    },
+    //TODO: add author username to select
+    // author: {},
+  };
+  private readonly blogRelations: FindOptionsRelations<Blog> = {
+    shop: true,
+    categories: {
+      category: true,
+    },
+    // author: true,
+  };
+
+  async findOneBySlug(slug: string) {
+    if (slug.trim() === "") {
+      throw new BadRequestException("slug is empty");
+    }
+    const blog = await this.blogRepository.find({
+      where: { slug: slug },
+      relations: this.blogRelations,
+      select: this.blogSelectRelations,
+    });
     if (!blog) {
       throw new NotFoundException("blog not found");
     }
+    return blog;
   }
 
-  async findOneWithId(id: number) {
-    const blog = await this.blogRepository.findOneBy({ id });
+  async findOneById(blogId: number) {
+    const blog = await this.blogRepository.find({
+      where: { id: blogId },
+      relations: this.blogRelations,
+      select: this.blogSelectRelations,
+    });
     if (!blog) {
       throw new NotFoundException("blog not found");
     }
-  }
-  findAll() {
-    return `This action returns all blog`;
+    return blog;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} blog`;
+  async findAll(paginationDto: paginationDto) {
+    const { page, limit, skip } = paginationResolver(
+      paginationDto.page,
+      paginationDto.limit
+    );
+    const [blogs, count] = await this.blogRepository.findAndCount({
+      where: {},
+      relations: this.blogRelations,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        updatedAt: true,
+        authorId: true,
+        slug: true,
+        image: true,
+        content: false,
+        ...this.blogSelectRelations,
+      },
+
+      skip,
+      take: limit,
+      order: { id: "DESC" },
+    });
+    return { pagination: paginationGenerator(count, page, limit), blogs };
   }
 
   update(id: number, updateBlogDto: UpdateBlogDto) {

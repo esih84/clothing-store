@@ -215,10 +215,6 @@ export class BlogService {
     return { pagination: paginationGenerator(count, page, limit), blogs };
   }
 
-  update(id: number, updateBlogDto: UpdateBlogDto) {
-    return `This action updates a #${id} blog`;
-  }
-
   /**
    * Soft deletes a blog and its associated categories by setting the `deletedAt` timestamp.
    *
@@ -250,5 +246,123 @@ export class BlogService {
     await this.blogRepository.save(blog);
 
     return { message: `Blog deleted successfully` };
+  }
+
+  async update(
+    blogId: number,
+    updateBlogDto: UpdateBlogDto,
+    image?: Express.Multer.File,
+    shopId?: number
+  ) {
+    const user = this.request["user"];
+    const blog = await this.blogRepository.findOneBy({ id: blogId });
+
+    if (!blog) {
+      throw new NotFoundException(`Blog not found`);
+    }
+
+    if (shopId && blog.shopId !== shopId) {
+      throw new ForbiddenException(`You are not allowed to update this blog`);
+    }
+
+    let { title, content, description, slug, status, categories } =
+      updateBlogDto;
+
+    if (title) blog.title = title;
+    if (content) blog.content = content;
+    if (description) blog.description = description;
+    if (status) blog.status = status;
+
+    // Handle image update
+    if (image && image[0]) {
+      // Delete the old image from S3 if it exists
+      if (blog.imageKey) {
+        await this.s3Service.deleteFile(blog.imageKey);
+      }
+
+      const { Location, Key } = await this.s3Service.uploadFile(
+        image[0],
+        "blog_image"
+      );
+      blog.image = Location;
+      blog.imageKey = Key;
+    }
+
+    // Handle slug
+    if (slug || title) {
+      const slugBase = slug ?? title;
+      const generatedSlug = createSlug(slugBase);
+
+      const exists = await this.checkBlogBySlug(generatedSlug);
+      if (exists && exists.id !== blogId) {
+        slug = generatedSlug + randomId();
+      } else {
+        slug = generatedSlug;
+      }
+
+      blog.slug = slug;
+    }
+
+    // Handle category update
+    if (categories) {
+      if (!isArray(categories) && typeof categories === "string") {
+        categories = categories.split(",");
+      } else if (!isArray(categories)) {
+        throw new BadRequestException("Enter the categories correctly.");
+      }
+
+      // حذف دسته‌های قبلی
+      await this.blogCategoryRepository.delete({ blogId: blog.id });
+
+      let allowedCategories: number[] | null = null;
+      if (shopId) {
+        const shopCategory = await this.categoryService.findOne(
+          blog.shopId,
+          true
+        );
+        allowedCategories = shopCategory.subcategories.reduce(
+          (acc, sub) => [...acc, sub.id],
+          [shopCategory.id]
+        );
+      }
+
+      await this.validateAndInsertCategories(
+        blog.id,
+        categories,
+        allowedCategories
+      );
+    }
+
+    await this.blogRepository.save(blog);
+
+    return {
+      message: "Blog updated successfully.",
+    };
+  }
+  private async validateAndInsertCategories(
+    blogId: number,
+    categories: (number | string)[],
+    allowedCategories?: number[] | null
+  ) {
+    for (let categoryId of categories) {
+      const id = parseInt(categoryId.toString());
+
+      if (isNaN(id)) {
+        throw new BadRequestException(`Invalid category ID: ${categoryId}`);
+      }
+
+      if (allowedCategories && !allowedCategories.includes(id)) {
+        throw new BadRequestException(
+          `Category ID ${id} is not allowed for this shop`
+        );
+      }
+
+      const category = await this.categoryService.findOne(id);
+
+      await this.blogCategoryRepository.insert({
+        blogId,
+        categoryId: category.id,
+      });
+    }
   }
 }

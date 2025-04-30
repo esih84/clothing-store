@@ -62,9 +62,27 @@ export class BlogController {
     return this.blogService.findOneBySlug(slug);
   }
 
-  @Patch(":id")
-  update(@Param("id") id: string, @Body() updateBlogDto: UpdateBlogDto) {
-    return this.blogService.update(+id, updateBlogDto);
+  @Auth(RoleNames.ADMIN_SHOP, RoleNames.STORE_WORKER)
+  @ApiOperation({ summary: "update blog" })
+  @ApiResponse({
+    status: 200,
+    description: "blog updated successfully.",
+  })
+  @ApiConsumes(SwaggerConsumes.MultipartData)
+  @Patch(":blogId/:shopId")
+  @UseInterceptors(
+    UploadFilesInterceptor(
+      [{ name: "image", maxCount: 1 }],
+      ["image/jpeg", "image/png", "image/jpg"]
+    )
+  )
+  update(
+    @Param("blogId", ParseIntPipe) blogId: number,
+    @Param("shopId", ParseIntPipe) shopId: number,
+    @Body() updateBlogDto: UpdateBlogDto,
+    @UploadedFiles() file: { image?: Express.Multer.File }
+  ) {
+    return this.blogService.update(blogId, updateBlogDto, file?.image, shopId);
   }
 
   @Auth(RoleNames.ADMIN_SHOP, RoleNames.STORE_WORKER)

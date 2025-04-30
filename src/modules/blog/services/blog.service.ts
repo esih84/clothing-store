@@ -111,18 +111,12 @@ export class BlogService {
         [shopCategory.id]
       );
     }
+    await this.validateAndInsertCategories(
+      blog.id,
+      categories,
+      allowedCategories
+    );
 
-    for (let categoryId of allowedCategories ?? categories) {
-      if (isNaN(parseInt(categoryId.toString()))) {
-        throw new BadRequestException();
-      }
-      const category = await this.categoryService.findOne(+categoryId);
-
-      await this.blogCategoryRepository.insert({
-        blogId: blog.id,
-        categoryId: +category.id,
-      });
-    }
     return {
       message: "blog created successfully.",
     };

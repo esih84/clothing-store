@@ -172,7 +172,7 @@ export class BlogService {
 
   async findOneById(blogId: number) {
     const blog = await this.blogRepository.find({
-      where: { id: blogId },
+      where: { id: blogId, deletedAt: null },
       relations: this.blogRelations,
       select: this.blogSelectRelations,
     });
@@ -188,7 +188,7 @@ export class BlogService {
       paginationDto.limit
     );
     const [blogs, count] = await this.blogRepository.findAndCount({
-      where: {},
+      where: { deletedAt: null },
       relations: this.blogRelations,
       select: {
         id: true,

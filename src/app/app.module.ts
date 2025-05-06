@@ -10,6 +10,7 @@ import { RoleModule } from "src/modules/role/role.module";
 import { ShopModule } from "src/modules/shop/shop.module";
 import { CategoryModule } from "src/modules/category/category.module";
 import { BlogModule } from "src/modules/blog/blog.module";
+import { ProfileModule } from "src/modules/profile/profile.module";
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { BlogModule } from "src/modules/blog/blog.module";
     TypeOrmModule.forRoot(TypeormConfig()),
     AuthModule,
     UserModule,
+    ProfileModule,
     BlogModule,
     ShopModule,
     CategoryModule,

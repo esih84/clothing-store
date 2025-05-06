@@ -5,6 +5,7 @@ import { Column, Entity, JoinColumn, OneToMany, OneToOne } from "typeorm";
 import { UserDocument } from "./user-document.entity";
 import { UserStatus } from "../enums/user-status.enum";
 import { Blog } from "src/modules/blog/entities/blog.entity";
+import { Profile } from "src/modules/profile/entities/profile.entity";
 
 @Entity()
 export class User extends BaseEntity {
@@ -29,4 +30,9 @@ export class User extends BaseEntity {
   status: UserStatus;
   @OneToMany(() => Blog, (blog) => blog.author)
   blogs: Blog[];
+  @OneToOne(() => Profile, (profile) => profile.user, {
+    cascade: true,
+    eager: true,
+  })
+  profile: Profile;
 }

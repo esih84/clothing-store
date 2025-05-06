@@ -33,7 +33,7 @@ export class UserService {
     const { mobile } = createUserDto;
     let user = await this.findOneByMobile(mobile);
     if (!user) {
-      user = this.userRepository.create({ mobile });
+      user = this.userRepository.create({ mobile, profile: {} });
     }
     await this.userRepository.save(user);
     return user;
